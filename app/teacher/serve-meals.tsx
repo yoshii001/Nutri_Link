@@ -7,15 +7,26 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getStudentsByTeacher,
   updateStudent,
 } from '@/services/firebase/studentService';
+import { getTeacherByUserId } from '@/services/firebase/teacherService';
+import { getClassesBySchoolId } from '@/services/firebase/classService';
+import {
+  getMealStockByClass,
+  decreaseMealStock,
+  MealStock,
+} from '@/services/firebase/mealStockService';
 import { StudentProfile } from '@/types';
 import { theme } from '@/constants/theme';
-import { CheckCircle, Circle, User } from 'lucide-react-native';
+import { CheckCircle, Circle, User, Package, X } from 'lucide-react-native';
+import TeacherHeader from '@/components/TeacherHeader';
+import TeacherBottomNav from '@/components/TeacherBottomNav';
 
 interface StudentWithServed extends StudentProfile {
   mealServedToday?: boolean;
@@ -25,6 +36,14 @@ export default function ServeMealsScreen() {
   const { user } = useAuth();
   const [students, setStudents] = useState<Record<string, StudentWithServed>>({});
   const [query, setQuery] = useState('');
+  const [schoolId, setSchoolId] = useState('');
+  const [classId, setClassId] = useState('');
+  const [mealStock, setMealStock] = useState<Record<string, MealStock>>({});
+  const [showMealSelector, setShowMealSelector] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<{
+    id: string;
+    student: StudentWithServed;
+  } | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -32,34 +51,101 @@ export default function ServeMealsScreen() {
     setStudents(list || {});
   };
 
+  const loadTeacherData = async () => {
+    if (!user) return;
+    try {
+      const teacherData = await getTeacherByUserId(user.uid);
+      if (!teacherData) return;
+
+      setSchoolId(teacherData.teacher.schoolId);
+
+      const allClasses = await getClassesBySchoolId(teacherData.teacher.schoolId);
+      let assignedClassId = '';
+
+      for (const [id, classInfo] of Object.entries(allClasses)) {
+        if (classInfo.teacherId === teacherData.id) {
+          assignedClassId = id;
+          break;
+        }
+      }
+
+      setClassId(assignedClassId);
+
+      if (assignedClassId) {
+        const meals = await getMealStockByClass(
+          teacherData.teacher.schoolId,
+          assignedClassId
+        );
+        setMealStock(meals);
+      }
+    } catch (error) {
+      console.error('Error loading teacher data:', error);
+    }
+  };
+
   useEffect(() => {
     load();
+    loadTeacherData();
   }, [user]);
 
   const handleServeMeal = async (studentKey: string, student: StudentWithServed) => {
+    if (student.mealServedToday) {
+      try {
+        await updateStudent(user!.uid, studentKey, {
+          mealServedToday: false,
+        });
+
+        setStudents((prev) => ({
+          ...prev,
+          [studentKey]: {
+            ...prev[studentKey],
+            mealServedToday: false,
+          },
+        }));
+
+        Alert.alert('Success', `Meal marking removed for ${student.name}`);
+      } catch (error) {
+        console.error('Error updating meal status:', error);
+        Alert.alert('Error', 'Failed to update meal status');
+      }
+    } else {
+      if (Object.keys(mealStock).length === 0) {
+        Alert.alert('No Meals', 'No meals in stock. Please claim meals first.');
+        return;
+      }
+      setSelectedStudent({ id: studentKey, student });
+      setShowMealSelector(true);
+    }
+  };
+
+  const serveMealWithStock = async (mealId: string, mealName: string) => {
+    if (!selectedStudent) return;
+
     try {
-      const newStatus = !student.mealServedToday;
-      await updateStudent(user!.uid, studentKey, {
-        mealServedToday: newStatus,
+      await decreaseMealStock(schoolId, classId, mealId, 1);
+
+      await updateStudent(user!.uid, selectedStudent.id, {
+        mealServedToday: true,
       });
 
       setStudents((prev) => ({
         ...prev,
-        [studentKey]: {
-          ...prev[studentKey],
-          mealServedToday: newStatus,
+        [selectedStudent.id]: {
+          ...prev[selectedStudent.id],
+          mealServedToday: true,
         },
       }));
 
-      Alert.alert(
-        'Success',
-        newStatus
-          ? `Meal served to ${student.name}`
-          : `Meal marking removed for ${student.name}`
-      );
+      const updatedMeals = await getMealStockByClass(schoolId, classId);
+      setMealStock(updatedMeals);
+
+      setShowMealSelector(false);
+      setSelectedStudent(null);
+
+      Alert.alert('Success', `${mealName} served to ${selectedStudent.student.name}`);
     } catch (error) {
-      console.error('Error updating meal status:', error);
-      Alert.alert('Error', 'Failed to update meal status');
+      console.error('Error serving meal:', error);
+      Alert.alert('Error', 'Failed to serve meal');
     }
   };
 
@@ -76,14 +162,10 @@ export default function ServeMealsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Serve Meals</Text>
-        <View style={styles.counter}>
-          <Text style={styles.counterText}>
-            {servedCount} / {totalCount}
-          </Text>
-        </View>
-      </View>
+      <TeacherHeader
+        title="Serve Meals"
+        subtitle={`${servedCount} / ${totalCount} served`}
+      />
 
       <View style={styles.searchContainer}>
         <TextInput
@@ -132,6 +214,69 @@ export default function ServeMealsScreen() {
           </View>
         }
       />
+
+      <Modal visible={showMealSelector} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Meal</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowMealSelector(false);
+                  setSelectedStudent(null);
+                }}
+              >
+                <X size={24} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedStudent && (
+              <Text style={styles.modalSubtitle}>
+                Serving to: {selectedStudent.student.name}
+              </Text>
+            )}
+
+            <ScrollView style={styles.mealList}>
+              {Object.entries(mealStock).map(([id, meal]) => (
+                <TouchableOpacity
+                  key={id}
+                  style={styles.mealOption}
+                  onPress={() => serveMealWithStock(id, meal.mealName)}
+                  disabled={meal.coverage <= 0}
+                >
+                  <Package
+                    size={20}
+                    color={meal.coverage > 0 ? theme.colors.primary : '#ccc'}
+                  />
+                  <View style={styles.mealOptionContent}>
+                    <Text
+                      style={[
+                        styles.mealOptionName,
+                        meal.coverage <= 0 && styles.mealOptionNameDisabled,
+                      ]}
+                    >
+                      {meal.mealName}
+                    </Text>
+                    <Text style={styles.mealOptionDetails}>
+                      Can serve {meal.coverage} more students
+                    </Text>
+                    <Text style={styles.mealOptionQuantity}>
+                      {meal.quantity} {meal.unit} available
+                    </Text>
+                  </View>
+                  {meal.coverage > 0 ? (
+                    <CheckCircle size={20} color={theme.colors.primary} />
+                  ) : (
+                    <Text style={styles.outOfStockText}>Out of Stock</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <TeacherBottomNav />
     </View>
   );
 }
@@ -140,29 +285,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
-  },
-  counter: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.full,
-  },
-  counterText: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 16,
-    color: '#fff',
   },
   searchContainer: {
     padding: theme.spacing.md,
@@ -228,5 +350,79 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.text.secondary,
     marginTop: theme.spacing.md,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    width: '100%',
+    maxHeight: '80%',
+    padding: theme.spacing.lg,
+    ...theme.shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.text.primary,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.md,
+  },
+  mealList: {
+    maxHeight: 400,
+  },
+  mealOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border || '#E5E7EB',
+  },
+  mealOptionContent: {
+    flex: 1,
+  },
+  mealOptionName: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.text.primary,
+    marginBottom: 4,
+  },
+  mealOptionNameDisabled: {
+    color: theme.colors.text.light,
+  },
+  mealOptionDetails: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.primary,
+    marginBottom: 2,
+  },
+  mealOptionQuantity: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: theme.colors.text.secondary,
+  },
+  outOfStockText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#DC2626',
   },
 });

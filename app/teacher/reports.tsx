@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { getAllMealTracking } from '@/services/firebase/mealTrackingService';
 import { theme } from '@/constants/theme';
+import TeacherHeader from '@/components/TeacherHeader';
+import TeacherBottomNav from '@/components/TeacherBottomNav';
 
 const ProgressBar = ({ percentage, color }: { percentage: number; color: string }) => {
   const [widthAnim] = useState(new Animated.Value(0));
@@ -111,13 +113,6 @@ const CircularProgress = ({ percentage, color, label }: any) => {
 
 export default function ReportsScreen() {
   const { userData } = useAuth();
-  const { signOut } = useAuth();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await signOut();
-    router.replace('/login' as any);
-  };
   const [summary, setSummary] = useState({ happy: 0, little: 0, none: 0, total: 0 });
   const [headerAnim] = useState(new Animated.Value(0));
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -314,34 +309,10 @@ export default function ReportsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Animated.View 
-        style={[
-          styles.header,
-          theme.shadows.sm,
-          {
-            transform: [
-              {
-                translateY: headerAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-50, 0],
-                }),
-              },
-            ],
-            opacity: headerAnim,
-          },
-        ]}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
-            <Text style={styles.title}>📊 Meal Reports</Text>
-            <Text style={styles.subtitle}>{monthName}</Text>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={{ padding: 6 }}>
-            <Text style={{ color: theme.colors.primary, fontFamily: 'Inter-SemiBold' }}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+    <View style={{ flex: 1 }}>
+      <TeacherHeader title="Meal Reports" subtitle={monthName} />
+
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
 
       <View style={{ paddingHorizontal: theme.spacing.md }}>
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginBottom: theme.spacing.md }}>
@@ -460,33 +431,18 @@ export default function ReportsScreen() {
         </View>
       )}
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      <TeacherBottomNav />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: theme.colors.background 
-  },
-  header: { 
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    borderBottomLeftRadius: theme.borderRadius.lg,
-    borderBottomRightRadius: theme.borderRadius.lg,
-    marginBottom: theme.spacing.lg,
-  },
-  title: { 
-    fontFamily: 'Inter-Bold', 
-    fontSize: 24, 
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: theme.colors.text.secondary,
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
   },
   summaryCard: {
     margin: theme.spacing.md,

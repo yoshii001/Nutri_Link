@@ -6,6 +6,8 @@ import { getStudentsByTeacher } from '@/services/firebase/studentService';
 import { saveMealTracking, addStudentMeal, updateStudentMeal, getMealTrackingByDate } from '@/services/firebase/mealTrackingService';
 import { StudentProfile } from '@/types';
 import { theme } from '@/constants/theme';
+import TeacherHeader from '@/components/TeacherHeader';
+import TeacherBottomNav from '@/components/TeacherBottomNav';
 
 const reactionMap = {
   happy: { emoji: '😊', label: 'Enjoyed', color: '#10B981' },
@@ -109,13 +111,7 @@ const StudentItem = ({ id, student, onToggleServed, onCycleReaction, onCycleHeal
 };
 
 export default function AttendanceScreen() {
-  const { userData, signOut } = useAuth();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await signOut();
-    router.replace('/login' as any);
-  };
+  const { userData } = useAuth();
   const [students, setStudents] = useState<Record<string, any>>({});
   const [dateStr] = useState(new Date().toISOString().split('T')[0]);
   const [headerAnim] = useState(new Animated.Value(0));
@@ -183,51 +179,25 @@ export default function AttendanceScreen() {
 
   return (
     <View style={styles.container}>
-      <Animated.View 
-        style={[
-          styles.header,
-          theme.shadows.sm,
-          {
-            transform: [
-              {
-                translateY: headerAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-50, 0],
-                }),
-              },
-            ],
-            opacity: headerAnim,
-          },
-        ]}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-          <View style={styles.headerTop}>
-            <Text style={styles.title}>📋 Attendance</Text>
-            <Text style={styles.dateText}>{new Date(dateStr).toLocaleDateString('en-US', { 
-              weekday: 'short', 
-              month: 'short', 
-              day: 'numeric' 
-            })}</Text>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={{ padding: 6 }}>
-            <Text style={{ color: theme.colors.primary, fontFamily: 'Inter-SemiBold' }}>Logout</Text>
-          </TouchableOpacity>
+      <TeacherHeader
+        title="Attendance"
+        subtitle={`${new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`}
+      />
+
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{totalServed}</Text>
+          <Text style={styles.statLabel}>Served</Text>
         </View>
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{totalServed}</Text>
-            <Text style={styles.statLabel}>Served</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{totalStudents}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </View>
-          <View style={[styles.statCard, styles.percentageCard]}>
-            <Text style={styles.percentageNumber}>{percentage}%</Text>
-            <Text style={styles.statLabel}>Complete</Text>
-          </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{totalStudents}</Text>
+          <Text style={styles.statLabel}>Total</Text>
         </View>
-      </Animated.View>
+        <View style={[styles.statCard, styles.percentageCard]}>
+          <Text style={styles.percentageNumber}>{percentage}%</Text>
+          <Text style={styles.statLabel}>Complete</Text>
+        </View>
+      </View>
 
       <FlatList
         data={Object.entries(students)}
@@ -243,41 +213,19 @@ export default function AttendanceScreen() {
         )}
         contentContainerStyle={styles.listContent}
       />
+
+      <TeacherBottomNav />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  header: { 
-    padding: theme.spacing.lg, 
-    backgroundColor: theme.colors.surface,
-    borderBottomLeftRadius: theme.borderRadius.lg,
-    borderBottomRightRadius: theme.borderRadius.lg,
-  },
-  headerTop: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  title: { 
-    fontFamily: 'Inter-Bold', 
-    fontSize: 24, 
-    color: theme.colors.text.primary 
-  },
-  dateText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
-  },
   statsContainer: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
   },
   statCard: {
     flex: 1,
@@ -308,6 +256,7 @@ const styles = StyleSheet.create({
   listContent: {
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
+    paddingBottom: 80,
   },
   item: { 
     flexDirection: 'row',

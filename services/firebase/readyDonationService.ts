@@ -229,8 +229,12 @@ export const listenToReadyDonationsByPrincipal = (
 };
 
 export const deleteReadyDonation = async (donationId: string): Promise<void> => {
-  const donationRef = ref(database, `readyDonations/${donationId}`);
+  console.log('deleteReadyDonation called', { donationId });
+  const path = `readyDonations/${donationId}`;
+  console.log('Firebase path:', path);
+  const donationRef = ref(database, path);
   await set(donationRef, null);
+  console.log('Ready donation successfully deleted from Firebase');
 };
 
 export const getReadyDonationsByDonorId = async (
@@ -296,7 +300,7 @@ export const listenToReadyDonationsBySchool = (
 ): (() => void) => {
   const donationsRef = ref(database, 'readyDonations');
 
-  const listener = onValue(donationsRef, (snapshot) => {
+  const listener = onValue(donationsRef, async (snapshot) => {
     if (!snapshot.exists()) {
       callback({});
       return;
@@ -305,11 +309,44 @@ export const listenToReadyDonationsBySchool = (
     const allDonations = snapshot.val() as Record<string, ReadyDonation>;
     const schoolDonations: Record<string, ReadyDonation> = {};
 
-    Object.entries(allDonations).forEach(([id, donation]) => {
+    for (const [id, donation] of Object.entries(allDonations)) {
       if (donation.schoolId === schoolId) {
-        schoolDonations[id] = donation;
+        const enrichedDonation = { ...donation };
+
+        if (donation.classId && !donation.className) {
+          try {
+            const classRef = ref(database, `classes/${schoolId}/${donation.classId}`);
+            const classSnapshot = await get(classRef);
+            if (classSnapshot.exists()) {
+              const classData = classSnapshot.val();
+              enrichedDonation.className = classData.className || 'Unknown Class';
+            } else {
+              enrichedDonation.className = 'No class assigned';
+            }
+          } catch (error) {
+            console.error('Error fetching class data:', error);
+            enrichedDonation.className = 'Error loading class';
+          }
+        } else if (!donation.classId) {
+          enrichedDonation.className = 'No class assigned';
+        }
+
+        if (!donation.schoolName) {
+          try {
+            const schoolRef = ref(database, `schools/${schoolId}`);
+            const schoolSnapshot = await get(schoolRef);
+            if (schoolSnapshot.exists()) {
+              const schoolData = schoolSnapshot.val();
+              enrichedDonation.schoolName = schoolData.name || 'Unknown School';
+            }
+          } catch (error) {
+            console.error('Error fetching school data:', error);
+          }
+        }
+
+        schoolDonations[id] = enrichedDonation;
       }
-    });
+    }
 
     callback(schoolDonations);
   });
@@ -322,10 +359,18 @@ export const claimDonationByTeacher = async (
   teacherId: string,
   teacherName: string
 ): Promise<void> => {
-  await updateReadyDonation(donationId, {
-    status: 'completed',
-    completedAt: new Date().toISOString(),
-    teacherId,
-    teacherName,
-  });
+  console.log('claimDonationByTeacher called with:', { donationId, teacherId, teacherName });
+
+  try {
+    await updateReadyDonation(donationId, {
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      teacherId,
+      teacherName,
+    });
+    console.log('Donation claimed successfully');
+  } catch (error) {
+    console.error('Error claiming donation:', error);
+    throw error;
+  }
 };

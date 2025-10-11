@@ -1,7 +1,7 @@
 import { ref, get, push, set, update, remove, query, orderByChild, equalTo } from 'firebase/database';
 import { database } from '@/config/firebase';
 import { StudentProfile } from '@/types';
-import { nanoid } from 'nanoid/non-secure';
+import { generateAccessCode } from '@/utils/accessCode';
 import { updateClassStudentCount } from './classService';
 
 export const getStudentsByTeacher = async (teacherId: string): Promise<Record<string, StudentProfile>> => {
@@ -16,13 +16,31 @@ export const addStudent = async (teacherId: string, student: StudentProfile): Pr
   try {
     const studentsRef = ref(database, `students/${teacherId}`);
     const newRef = push(studentsRef);
-    const parentAccessToken = nanoid(16);
 
-    // remove undefined values because RTDB fails when values contain undefined
+    let parentAccessToken = generateAccessCode();
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+      const existingStudent = await getStudentByAccessCode(parentAccessToken);
+      if (!existingStudent) {
+        isUnique = true;
+      } else {
+        parentAccessToken = generateAccessCode();
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      throw new Error('Failed to generate unique access code');
+    }
+
     const raw = {
       ...student,
       teacherId,
       parentAccessToken,
+      allergies: student.allergies || 'none',
+      mealFeedbacks: student.mealFeedbacks || null,
       createdAt: new Date().toISOString()
     } as any;
     const payload = JSON.parse(JSON.stringify(raw));
@@ -151,6 +169,58 @@ export const getStudentsByClassId = async (classId: string): Promise<Record<stri
     return classStudents;
   } catch (err) {
     console.error('studentService.getStudentsByClassId error:', err);
+    throw err;
+  }
+};
+
+export const getStudentByAccessCode = async (accessCode: string): Promise<{ teacherId: string; studentKey: string; student: StudentProfile } | null> => {
+  try {
+    const allTeachersRef = ref(database, 'students');
+    const snapshot = await get(allTeachersRef);
+
+    if (!snapshot.exists()) return null;
+
+    const allTeachers = snapshot.val();
+
+    for (const [teacherId, students] of Object.entries(allTeachers)) {
+      for (const [studentKey, student] of Object.entries(students as Record<string, StudentProfile>)) {
+        if (student.parentAccessToken === accessCode) {
+          return { teacherId, studentKey, student };
+        }
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error('studentService.getStudentByAccessCode error:', err);
+    throw err;
+  }
+};
+
+export const regenerateAccessCode = async (teacherId: string, studentId: string): Promise<string> => {
+  try {
+    let parentAccessToken = generateAccessCode();
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+      const existingStudent = await getStudentByAccessCode(parentAccessToken);
+      if (!existingStudent) {
+        isUnique = true;
+      } else {
+        parentAccessToken = generateAccessCode();
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      throw new Error('Failed to generate unique access code');
+    }
+
+    await updateStudent(teacherId, studentId, { parentAccessToken });
+    return parentAccessToken;
+  } catch (err) {
+    console.error('studentService.regenerateAccessCode error:', err, { teacherId, studentId });
     throw err;
   }
 };

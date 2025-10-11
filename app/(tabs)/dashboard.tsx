@@ -27,6 +27,10 @@ export default function DashboardScreen() {
     return <Redirect href="/principal/dashboard" />;
   }
 
+  if (userData?.role === 'teacher') {
+    return <Redirect href="/teacher/dashboard" />;
+  }
+
   const loadDashboardData = async () => {
     try {
       const mealTracking = await getAllMealTracking();

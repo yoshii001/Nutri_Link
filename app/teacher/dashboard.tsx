@@ -1,66 +1,55 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { theme } from '@/constants/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { Users, UtensilsCrossed, ClipboardCheck, BarChart, Package } from 'lucide-react-native';
+import TeacherHeader from '@/components/TeacherHeader';
+import TeacherBottomNav from '@/components/TeacherBottomNav';
 
 export default function TeacherDashboard() {
   const router = useRouter();
-  const { userData, signOut } = useAuth();
-
-  const handleLogout = async () => {
-    await signOut();
-    router.replace('/login' as any);
-  };
+  const { userData } = useAuth();
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.accent]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
-            <Text style={styles.title}>Teacher Dashboard</Text>
-            <Text style={styles.subtitle}>Welcome, {userData?.name || 'Teacher'}</Text>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={{ padding: 6 }}>
-            <Text style={{ color: theme.colors.surface, fontFamily: 'Inter-SemiBold' }}>Logout</Text>
+      <TeacherHeader title="Teacher Dashboard" subtitle={`Welcome, ${userData?.name || 'Teacher'}`} />
+
+      <ScrollView style={styles.content}>
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/claim-meal' as any)}>
+            <Package size={32} color={theme.colors.primary} />
+            <Text style={styles.cardTitle}>Claim Meals</Text>
+            <Text style={styles.cardDesc}>View and claim available donations for your class</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/students' as any)}>
+            <Users size={32} color={theme.colors.primary} />
+            <Text style={styles.cardTitle}>Manage Students</Text>
+            <Text style={styles.cardDesc}>Add or view student profiles and share links</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/serve-meals' as any)}>
+            <UtensilsCrossed size={32} color={theme.colors.primary} />
+            <Text style={styles.cardTitle}>Serve Meals</Text>
+            <Text style={styles.cardDesc}>Mark meals served to students</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/attendance' as any)}>
+            <ClipboardCheck size={32} color={theme.colors.primary} />
+            <Text style={styles.cardTitle}>Mark Attendance & Feedback</Text>
+            <Text style={styles.cardDesc}>Track daily attendance and give feedback</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/reports' as any)}>
+            <BarChart size={32} color={theme.colors.primary} />
+            <Text style={styles.cardTitle}>Monthly Reports</Text>
+            <Text style={styles.cardDesc}>View performance and attendance summaries</Text>
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </ScrollView>
 
-      {/* Dashboard Cards */}
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/students' as any)}>
-          <Ionicons name="people-outline" size={32} color={theme.colors.primary} />
-          <Text style={styles.cardTitle}>Manage Students</Text>
-          <Text style={styles.cardDesc}>Add or view student profiles and share links</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/serve-meals' as any)}>
-          <Ionicons name="restaurant-outline" size={32} color={theme.colors.primary} />
-          <Text style={styles.cardTitle}>Serve Meals</Text>
-          <Text style={styles.cardDesc}>Mark meals served to students</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/attendance' as any)}>
-          <Ionicons name="checkmark-done-circle-outline" size={32} color={theme.colors.primary} />
-          <Text style={styles.cardTitle}>Mark Attendance & Feedback</Text>
-          <Text style={styles.cardDesc}>Track daily attendance and give feedback</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/reports' as any)}>
-          <Ionicons name="bar-chart-outline" size={32} color={theme.colors.primary} />
-          <Text style={styles.cardTitle}>Monthly Reports</Text>
-          <Text style={styles.cardDesc}>View performance and attendance summaries</Text>
-        </TouchableOpacity>
-      </View>
+      <TeacherBottomNav />
     </View>
   );
 }
@@ -70,31 +59,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: theme.spacing.xl,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    elevation: 8,
-    shadowColor: '#000',
-  },
-  title: {
-    fontSize: 30,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.surface,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: theme.colors.surface,
-    marginTop: 6,
-    opacity: 0.9,
+  content: {
+    flex: 1,
   },
   actions: {
     padding: theme.spacing.lg,
     gap: theme.spacing.lg,
-    marginTop: 20,
   },
   card: {
     backgroundColor: theme.colors.surface,

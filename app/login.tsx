@@ -134,6 +134,17 @@ export default function LoginScreen() {
                 <Text style={styles.signupLink}>Create Account</Text>
               </TouchableOpacity>
             </View>
+
+            <View style={styles.parentLoginSection}>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.parentLoginButton}
+                onPress={() => router.push('/parent-login')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.parentLoginText}>Parent? Login with Access Code</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -371,6 +382,27 @@ const styles = StyleSheet.create({
   },
   signupLink: {
     fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.primary,
+  },
+  parentLoginSection: {
+    marginTop: theme.spacing.lg,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginBottom: theme.spacing.md,
+  },
+  parentLoginButton: {
+    backgroundColor: `${theme.colors.primary}10`,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  parentLoginText: {
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
     color: theme.colors.primary,
   },

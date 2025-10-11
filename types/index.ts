@@ -31,7 +31,7 @@ export interface StudentProfile {
   parentContact: string;
   parentEmail?: string;
   allergies?: string;
-  mealFeedbacks?: string;
+  mealFeedbacks?: string | null;
   parentAccessToken?: string;
   createdAt?: string;
   teacherId?: string;

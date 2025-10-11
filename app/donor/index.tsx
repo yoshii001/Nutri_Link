@@ -2,30 +2,44 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ClipboardCheck, Package, DollarSign, Heart } from 'lucide-react-native';
+import { ClipboardCheck, Package, DollarSign, Heart, Star } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPendingReadyDonationsByDonorId } from '@/services/firebase/readyDonationService';
+import { getDonorAverageRating, getRatingsByDonorId, DonorRating } from '@/services/firebase/donorRatingService';
 import { theme } from '@/constants/theme';
 
 export default function DonorIndex() {
   const router = useRouter();
   const { user } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
+  const [recentRatings, setRecentRatings] = useState<DonorRating[]>([]);
 
   useEffect(() => {
     if (!user) return;
 
-    const loadPendingCount = async () => {
+    const loadData = async () => {
       try {
         const pending = await getPendingReadyDonationsByDonorId(user.uid);
         setPendingCount(Object.keys(pending).length);
+
+        const ratingStats = await getDonorAverageRating(user.uid);
+        setAverageRating(ratingStats.average);
+        setTotalRatings(ratingStats.count);
+
+        const ratingsData = await getRatingsByDonorId(user.uid);
+        const ratingsArray = Object.values(ratingsData)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 3);
+        setRecentRatings(ratingsArray);
       } catch (error) {
-        console.error('Error loading pending count:', error);
+        console.error('Error loading data:', error);
       }
     };
 
-    loadPendingCount();
-    const interval = setInterval(loadPendingCount, 30000);
+    loadData();
+    const interval = setInterval(loadData, 30000);
 
     return () => clearInterval(interval);
   }, [user]);
@@ -69,6 +83,54 @@ export default function DonorIndex() {
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {totalRatings > 0 && (
+          <View style={styles.ratingsCard}>
+            <View style={styles.ratingsHeader}>
+              <Star size={24} color="#F59E0B" fill="#F59E0B" strokeWidth={2} />
+              <Text style={styles.ratingsTitle}>Your Ratings</Text>
+            </View>
+            <View style={styles.ratingsStats}>
+              <View style={styles.ratingsStat}>
+                <Text style={styles.ratingsAverage}>{averageRating.toFixed(1)}</Text>
+                <Text style={styles.ratingsLabel}>Average Rating</Text>
+              </View>
+              <View style={styles.ratingsStat}>
+                <Text style={styles.ratingsCount}>{totalRatings}</Text>
+                <Text style={styles.ratingsLabel}>Total Ratings</Text>
+              </View>
+            </View>
+            {recentRatings.length > 0 && (
+              <View style={styles.recentRatingsSection}>
+                <Text style={styles.recentRatingsTitle}>Recent Feedback</Text>
+                {recentRatings.map((rating, index) => (
+                  <View key={index} style={styles.ratingItem}>
+                    <View style={styles.ratingItemHeader}>
+                      <Text style={styles.ratingItemName}>{rating.parentName}</Text>
+                      <View style={styles.ratingStars}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            size={14}
+                            color="#F59E0B"
+                            fill={star <= rating.rating ? '#F59E0B' : 'transparent'}
+                            strokeWidth={2}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                    {rating.comment && (
+                      <Text style={styles.ratingItemComment}>{rating.comment}</Text>
+                    )}
+                    <Text style={styles.ratingItemDate}>
+                      {new Date(rating.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.menuGrid}>
           {menuItems.map((item, index) => {
             const Icon = item.icon;
@@ -194,5 +256,97 @@ const styles = StyleSheet.create({
     color: theme.colors.surface,
     opacity: 0.9,
     lineHeight: 20,
+  },
+  ratingsCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.md,
+  },
+  ratingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  ratingsTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.text.primary,
+  },
+  ratingsStats: {
+    flexDirection: 'row',
+    gap: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+  },
+  ratingsStat: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: `${theme.colors.primary}10`,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+  },
+  ratingsAverage: {
+    fontSize: 32,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.primary,
+    marginBottom: 4,
+  },
+  ratingsCount: {
+    fontSize: 32,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.primary,
+    marginBottom: 4,
+  },
+  ratingsLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  recentRatingsSection: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.spacing.md,
+  },
+  recentRatingsTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md,
+  },
+  ratingItem: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  ratingItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  ratingItemName: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.text.primary,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  ratingItemComment: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
+    lineHeight: 20,
+  },
+  ratingItemDate: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: theme.colors.text.light,
   },
 });

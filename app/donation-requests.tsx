@@ -94,56 +94,33 @@ export default function DonationRequestsScreen() {
   };
 
   const handleApprove = async (requestId: string) => {
-    Alert.alert(
-      'Approve Request',
-      'Are you sure you want to approve this donation request?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Approve',
-          onPress: async () => {
-            try {
-              console.log('Approving donation request:', requestId);
-              const { approveDonationRequest } = await import('@/services/firebase/readyDonationService');
-              await approveDonationRequest(requestId);
-              console.log('Donation approved successfully');
-              setSelectedRequest(null);
-              await loadData();
-              Alert.alert('Success', 'Donation request approved! Teachers can now claim it.');
-            } catch (error: any) {
-              console.error('Error approving request:', error);
-              Alert.alert('Error', error.message || 'Failed to approve request');
-            }
-          },
-        },
-      ]
-    );
+    console.log('handleApprove called with requestId:', requestId);
+    try {
+      console.log('Approving donation request:', requestId);
+      const { approveDonationRequest } = await import('@/services/firebase/readyDonationService');
+      await approveDonationRequest(requestId);
+      console.log('Donation approved successfully');
+      setSelectedRequest(null);
+      await loadData();
+      Alert.alert('Success', 'Donation request approved! Teachers can now claim it.');
+    } catch (error: any) {
+      console.error('Error approving request:', error);
+      Alert.alert('Error', error.message || 'Failed to approve request');
+    }
   };
 
   const handleReject = async (requestId: string) => {
-    Alert.alert(
-      'Reject Request',
-      'Are you sure you want to reject this donation request?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { rejectDonationRequest } = await import('@/services/firebase/readyDonationService');
-              await rejectDonationRequest(requestId);
-              await loadData();
-              setSelectedRequest(null);
-              Alert.alert('Success', 'Donation request rejected');
-            } catch (error) {
-              console.error('Error rejecting request:', error);
-              Alert.alert('Error', 'Failed to reject request');
-            }
-          },
-        },
-      ]
-    );
+    console.log('handleReject called with requestId:', requestId);
+    try {
+      const { rejectDonationRequest } = await import('@/services/firebase/readyDonationService');
+      await rejectDonationRequest(requestId);
+      await loadData();
+      setSelectedRequest(null);
+      Alert.alert('Success', 'Donation request rejected');
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      Alert.alert('Error', 'Failed to reject request');
+    }
   };
 
   return (
@@ -251,8 +228,8 @@ export default function DonationRequestsScreen() {
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={styles.approveButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
+                      onPress={() => {
+                        console.log('Approve button pressed for ID:', id);
                         handleApprove(id);
                       }}
                       activeOpacity={0.8}
@@ -262,8 +239,8 @@ export default function DonationRequestsScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.rejectButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
+                      onPress={() => {
+                        console.log('Reject button pressed for ID:', id);
                         handleReject(id);
                       }}
                       activeOpacity={0.8}

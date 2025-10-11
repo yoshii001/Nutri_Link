@@ -7,11 +7,15 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Modal,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Package, ArrowLeft, Users, CheckCircle } from 'lucide-react-native';
+import { Package, ArrowLeft, Users, CheckCircle, Home, Settings, User, LogOut, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/config/firebase';
 import { getTeacherByUserId } from '@/services/firebase/teacherService';
 import {
   listenToReadyDonationsBySchool,
@@ -28,6 +32,10 @@ export default function ClaimDonationsScreen() {
   const [classId, setClassId] = useState('');
   const [donations, setDonations] = useState<Record<string, ReadyDonation>>({});
   const [refreshing, setRefreshing] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [selectedDonationId, setSelectedDonationId] = useState<string | null>(null);
+  const [claimMessage, setClaimMessage] = useState('');
+  const [isClaiming, setIsClaiming] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -72,14 +80,21 @@ export default function ClaimDonationsScreen() {
   };
 
   const handleClaim = async (donationId: string, donation: ReadyDonation) => {
-    if (!user || !userData) return;
+    console.log('handleClaim called', { donationId, classId, donation });
+    if (!user || !userData) {
+      console.log('No user or userData');
+      return;
+    }
 
     if (!classId) {
       Alert.alert('Error', 'You are not assigned to a class. Please contact your principal.');
       return;
     }
 
+    console.log('Checking if donation classId matches', { donationClassId: donation.classId, myClassId: classId });
+
     if (donation.classId !== classId) {
+      console.log('Class does not match, showing confirmation dialog');
       Alert.alert(
         'Different Class',
         `This donation is assigned to ${donation.className}, but you teach a different class. Do you still want to claim it?`,
@@ -92,24 +107,71 @@ export default function ClaimDonationsScreen() {
         ]
       );
     } else {
+      console.log('Class matches, proceeding to performClaim');
       performClaim(donationId);
     }
   };
 
   const performClaim = async (donationId: string) => {
-    if (!user || !userData) return;
+    console.log('performClaim called', { donationId, schoolId, classId });
+    if (!user || !userData) {
+      console.log('No user or userData in performClaim');
+      return;
+    }
 
-    Alert.alert('Claim Donation', 'Claim this donation for your class?', [
+    setSelectedDonationId(donationId);
+    setClaimMessage('Claim this donation for your class?');
+    setShowClaimModal(true);
+  };
+
+  const confirmClaim = async () => {
+    if (!selectedDonationId || !user || !userData) return;
+
+    setIsClaiming(true);
+    try {
+      console.log('Attempting to claim donation...');
+      await claimDonationByTeacher(selectedDonationId, user.uid, userData.name);
+      console.log('Claim successful, showing success alert');
+      setShowClaimModal(false);
+      setSelectedDonationId(null);
+      setIsClaiming(false);
+
+      if (Platform.OS === 'web') {
+        alert('Success: Donation claimed successfully!');
+      } else {
+        Alert.alert('Success', 'Donation claimed successfully!');
+      }
+    } catch (error) {
+      console.error('Error claiming donation:', error);
+      setIsClaiming(false);
+      setShowClaimModal(false);
+
+      if (Platform.OS === 'web') {
+        alert('Error: Failed to claim donation');
+      } else {
+        Alert.alert('Error', 'Failed to claim donation');
+      }
+    }
+  };
+
+  const cancelClaim = () => {
+    setShowClaimModal(false);
+    setSelectedDonationId(null);
+  };
+
+  const handleLogout = async () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Claim',
+        text: 'Logout',
+        style: 'destructive',
         onPress: async () => {
           try {
-            await claimDonationByTeacher(donationId, user.uid, userData.name);
-            Alert.alert('Success', 'Donation claimed successfully!');
+            await signOut(auth);
+            router.replace('/login');
           } catch (error) {
-            console.error('Error claiming donation:', error);
-            Alert.alert('Error', 'Failed to claim donation');
+            console.error('Error logging out:', error);
+            Alert.alert('Error', 'Failed to logout');
           }
         },
       },
@@ -144,6 +206,29 @@ export default function ClaimDonationsScreen() {
           <ArrowLeft size={24} color={theme.colors.primary} strokeWidth={2} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
+        <View style={styles.topBarActions}>
+          <TouchableOpacity
+            style={styles.topBarButton}
+            onPress={() => router.push('/profile')}
+            activeOpacity={0.7}
+          >
+            <User size={22} color={theme.colors.text.secondary} strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.topBarButton}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <Settings size={22} color={theme.colors.text.secondary} strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.topBarButton}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <LogOut size={22} color={theme.colors.error} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <LinearGradient
@@ -179,7 +264,9 @@ export default function ClaimDonationsScreen() {
               <View key={id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.donorBadge}>
-                    <Text style={styles.donorBadgeText}>{donation.category.toUpperCase()}</Text>
+                    <Text style={styles.donorBadgeText}>
+                      {(donation.category || 'DONATION').toUpperCase()}
+                    </Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
                     <Text style={[styles.statusText, { color: statusColors.text }]}>
@@ -201,16 +288,24 @@ export default function ClaimDonationsScreen() {
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Class:</Text>
                   <Text style={styles.detailValue}>
-                    {donation.className}
-                    {isMyClass && <Text style={styles.myClassTag}> (Your Class)</Text>}
+                    {donation.className || 'No class assigned'}
+                    {isMyClass && donation.className && donation.className !== 'No class assigned' && (
+                      <Text style={styles.myClassTag}> (Your Class)</Text>
+                    )}
                   </Text>
                 </View>
 
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Students:</Text>
-                  <Text style={styles.detailValue}>
-                    <Users size={14} color={theme.colors.primary} /> {donation.numberOfStudents}
-                  </Text>
+                <View style={styles.mealCoverageBox}>
+                  <Users size={20} color={theme.colors.primary} strokeWidth={2.5} />
+                  <View style={styles.mealCoverageContent}>
+                    <Text style={styles.mealCoverageLabel}>Meal Coverage</Text>
+                    <Text style={styles.mealCoverageValue}>
+                      Can serve {donation.numberOfStudents} students
+                    </Text>
+                    <Text style={styles.mealCoverageDetails}>
+                      {donation.quantity} {donation.unit} available
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={styles.detailRow}>
@@ -254,7 +349,7 @@ export default function ClaimDonationsScreen() {
                       style={styles.claimButtonGradient}
                     >
                       <Package size={20} color={theme.colors.surface} />
-                      <Text style={styles.claimButtonText}>Claim This Donation</Text>
+                      <Text style={styles.claimButtonText}>Claim as Meal</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 )}
@@ -279,6 +374,90 @@ export default function ClaimDonationsScreen() {
           })
         )}
       </ScrollView>
+
+      <View style={styles.bottomNav}>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => router.push('/teacher/dashboard')}
+          activeOpacity={0.7}
+        >
+          <Home size={24} color={theme.colors.text.secondary} strokeWidth={2} />
+          <Text style={styles.navButtonText}>Dashboard</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => router.push('/teacher/students')}
+          activeOpacity={0.7}
+        >
+          <Users size={24} color={theme.colors.text.secondary} strokeWidth={2} />
+          <Text style={styles.navButtonText}>Students</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.navButton, styles.navButtonActive]}
+          onPress={() => router.push('/teacher/claim-donations')}
+          activeOpacity={0.7}
+        >
+          <Package size={24} color={theme.colors.primary} strokeWidth={2} />
+          <Text style={[styles.navButtonText, styles.navButtonTextActive]}>Donations</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={() => router.push('/profile')}
+          activeOpacity={0.7}
+        >
+          <User size={24} color={theme.colors.text.secondary} strokeWidth={2} />
+          <Text style={styles.navButtonText}>Profile</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={showClaimModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelClaim}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Claim Donation</Text>
+              <TouchableOpacity onPress={cancelClaim} style={styles.modalCloseButton}>
+                <X size={24} color={theme.colors.text.secondary} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalMessage}>{claimMessage}</Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={cancelClaim}
+                disabled={isClaiming}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalButtonCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={confirmClaim}
+                disabled={isClaiming}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[theme.colors.primary, theme.colors.accent]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.modalButtonGradient}
+                >
+                  <Text style={styles.modalButtonConfirmText}>
+                    {isClaiming ? 'Claiming...' : 'Claim'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -289,6 +468,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: theme.colors.surface,
     paddingTop: 50,
     paddingBottom: 12,
@@ -305,6 +487,42 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
+    color: theme.colors.primary,
+  },
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+  },
+  topBarButton: {
+    padding: theme.spacing.xs,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingBottom: 8,
+    paddingTop: 8,
+    ...theme.shadows.lg,
+  },
+  navButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  navButtonActive: {
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.primary,
+  },
+  navButtonText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.text.secondary,
+    marginTop: 4,
+  },
+  navButtonTextActive: {
     color: theme.colors.primary,
   },
   header: {
@@ -382,6 +600,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
     color: theme.colors.primary,
+  },
+  mealCoverageBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    backgroundColor: `${theme.colors.primary}10`,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  mealCoverageContent: {
+    flex: 1,
+  },
+  mealCoverageLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.text.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  mealCoverageValue: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.primary,
+    marginBottom: 2,
+  },
+  mealCoverageDetails: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: theme.colors.text.secondary,
   },
   detailRow: {
     flexDirection: 'row',
@@ -470,5 +722,76 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: theme.colors.text.light,
     marginTop: theme.spacing.xs,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    ...theme.shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.text.primary,
+  },
+  modalCloseButton: {
+    padding: theme.spacing.xs,
+  },
+  modalMessage: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xl,
+    lineHeight: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: theme.borderRadius.md,
+    overflow: 'hidden',
+  },
+  modalButtonCancel: {
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonCancelText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.text.secondary,
+  },
+  modalButtonConfirm: {
+    ...theme.shadows.sm,
+  },
+  modalButtonGradient: {
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonConfirmText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.surface,
   },
 });

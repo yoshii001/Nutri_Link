@@ -17,12 +17,15 @@ import {
   addStudent,
   deleteStudent,
   updateStudent,
+  regenerateAccessCode,
 } from '@/services/firebase/studentService';
-import { getTeacherById } from '@/services/firebase/teacherService';
+import { getTeacherById, getTeacherByUserId } from '@/services/firebase/teacherService';
 import { getClassesBySchoolId } from '@/services/firebase/classService';
 import { StudentProfile, ClassInfo } from '@/types';
 import { theme } from '@/constants/theme';
-import { User, Trash2, Share2, Plus, X, Users } from 'lucide-react-native';
+import { User, Trash2, Share2, Plus, X, Users, RefreshCw } from 'lucide-react-native';
+import TeacherHeader from '@/components/TeacherHeader';
+import TeacherBottomNav from '@/components/TeacherBottomNav';
 
 export default function StudentsScreen() {
   const { user } = useAuth();
@@ -41,6 +44,10 @@ export default function StudentsScreen() {
   const [grade, setGrade] = useState('');
   const [parentName, setParentName] = useState('');
   const [parentContact, setParentContact] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
+  const [allergies, setAllergies] = useState('none');
+  const [teacherClassId, setTeacherClassId] = useState('');
+  const [teacherClass, setTeacherClass] = useState<ClassInfo | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -48,11 +55,23 @@ export default function StudentsScreen() {
       const list = await getStudentsByTeacher(user.uid);
       setStudents(list || {});
 
-      const teacherData = await getTeacherById(user.uid);
-      if (teacherData?.schoolId) {
-        setSchoolId(teacherData.schoolId);
-        const classesData = await getClassesBySchoolId(teacherData.schoolId);
-        setClasses(classesData || {});
+      const teacherData = await getTeacherByUserId(user.uid);
+      if (teacherData) {
+        const { teacher } = teacherData;
+        if (teacher.schoolId) {
+          setSchoolId(teacher.schoolId);
+          const classesData = await getClassesBySchoolId(teacher.schoolId);
+          setClasses(classesData || {});
+
+          if (teacher.classId) {
+            setTeacherClassId(teacher.classId);
+            const assignedClass = classesData[teacher.classId];
+            if (assignedClass) {
+              setTeacherClass(assignedClass);
+              setGrade(assignedClass.grade || '');
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -63,13 +82,32 @@ export default function StudentsScreen() {
     load();
   }, [user]);
 
+  const calculateAge = (dob: string): number => {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--;
+    }
+
+    return calculatedAge;
+  };
+
+  const handleDOBChange = (dob: string) => {
+    setDateOfBirth(dob);
+    if (dob && /^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+      const calculatedAge = calculateAge(dob);
+      setAge(calculatedAge.toString());
+    }
+  };
+
   const handleAdd = async () => {
     if (
       !studentId.trim() ||
       !name.trim() ||
       !dateOfBirth.trim() ||
-      !age.trim() ||
-      !grade.trim() ||
       !parentName.trim() ||
       !parentContact.trim()
     ) {
@@ -77,16 +115,22 @@ export default function StudentsScreen() {
       return;
     }
 
+    const calculatedAge = calculateAge(dateOfBirth.trim());
+    const finalGrade = teacherClass ? teacherClass.grade : grade.trim();
+    const finalClassId = teacherClassId || undefined;
+
     const payload: StudentProfile = {
       studentId: studentId.trim(),
       name: name.trim(),
       dateOfBirth: dateOfBirth.trim(),
-      age: parseInt(age, 10),
-      grade: grade.trim(),
+      age: calculatedAge,
+      grade: finalGrade,
       parentName: parentName.trim(),
       parentContact: parentContact.trim(),
-      allergies: '',
-      mealFeedbacks: '',
+      parentEmail: parentEmail.trim() || undefined,
+      allergies: allergies.trim() || 'none',
+      mealFeedbacks: undefined,
+      classId: finalClassId,
     };
 
     try {
@@ -95,9 +139,15 @@ export default function StudentsScreen() {
       setName('');
       setDateOfBirth('');
       setAge('');
-      setGrade('');
+      if (teacherClass) {
+        setGrade(teacherClass.grade || '');
+      } else {
+        setGrade('');
+      }
       setParentName('');
       setParentContact('');
+      setParentEmail('');
+      setAllergies('none');
       setShowAddModal(false);
       await load();
       Alert.alert('Success', `${payload.name} added successfully!`);
@@ -123,10 +173,27 @@ export default function StudentsScreen() {
   };
 
   const handleShareLink = async (student: StudentProfile, studentKey: string) => {
-    const link = `myapp://parent-portal?studentId=${student.studentId}&token=${student.parentAccessToken}`;
     try {
+      const shareMessage = `🎓 Parent Portal Access for ${student.name}\n\n` +
+        `Dear ${student.parentName},\n\n` +
+        `You can now access your child's meal information using the Parent Portal.\n\n` +
+        `📱 Access Code: ${student.parentAccessToken}\n\n` +
+        `Instructions:\n` +
+        `1. Open the app and tap "Parent Login"\n` +
+        `2. Enter the 8-character access code exactly as shown\n` +
+        `3. Code format: 7 capital letters + 1 symbol ($, @, #, or *)\n` +
+        `4. Access your child's information\n\n` +
+        `What you can do:\n` +
+        `• View today's meal and donor information\n` +
+        `• Update allergy information\n` +
+        `• Provide meal feedback\n` +
+        `• Rate donors who provide meals\n\n` +
+        `Student: ${student.name}\n` +
+        `Grade: ${student.grade}\n\n` +
+        `Thank you for your participation!`;
+
       await Share.share({
-        message: `Parent Portal Link for ${student.name}:\n\n${link}\n\nStudent ID: ${student.studentId}\nAccess Token: ${student.parentAccessToken}`,
+        message: shareMessage,
         title: 'Parent Portal Access',
       });
     } catch (error) {
@@ -153,6 +220,29 @@ export default function StudentsScreen() {
     }
   };
 
+  const handleRegenerateCode = async (studentId: string, studentName: string) => {
+    Alert.alert(
+      'Regenerate Access Code',
+      `Generate a new 8-character access code for ${studentName}?\n\nThis will invalidate the old code.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Regenerate',
+          onPress: async () => {
+            try {
+              const newCode = await regenerateAccessCode(user!.uid, studentId);
+              await load();
+              Alert.alert('Success', `New access code: ${newCode}\n\nShare this code with the parent.`);
+            } catch (error) {
+              console.error('Error regenerating code:', error);
+              Alert.alert('Error', 'Failed to regenerate access code');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const filtered = Object.entries(students).filter(([id, s]) => {
     const q = query.toLowerCase();
     return (
@@ -164,10 +254,12 @@ export default function StudentsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Students</Text>
+      <TeacherHeader title="My Students" />
+
+      <View style={styles.addButtonContainer}>
         <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
-          <Plus color="#fff" size={24} />
+          <Plus color="#fff" size={20} />
+          <Text style={styles.addButtonText}>Add Student</Text>
         </TouchableOpacity>
       </View>
 
@@ -190,10 +282,22 @@ export default function StudentsScreen() {
             <View style={styles.studentRow}>
               <View style={styles.studentInfo}>
                 <Text style={styles.studentName}>{s.name}</Text>
-                <Text style={styles.studentDetail}>ID: {s.studentId}</Text>
+                <Text style={styles.studentDetail}>ID: {s.studentId} | Age: {s.age} | Grade: {s.grade}</Text>
                 <Text style={styles.studentDetail}>
                   Parent: {s.parentName} ({s.parentContact})
                 </Text>
+                {s.parentAccessToken && (
+                  <View style={styles.accessCodeBox}>
+                    <Text style={styles.accessCodeLabel}>Parent Access Code:</Text>
+                    <Text style={styles.accessCodeValue}>{s.parentAccessToken}</Text>
+                    {s.parentAccessToken.length !== 8 && (
+                      <Text style={styles.invalidCodeWarning}>Invalid format (should be 8 chars)</Text>
+                    )}
+                  </View>
+                )}
+                {s.allergies && s.allergies !== 'none' && (
+                  <Text style={styles.allergyTag}>⚠️ Allergies: {s.allergies}</Text>
+                )}
                 {studentClass ? (
                   <Text style={styles.classInfo}>Class: {studentClass.className}</Text>
                 ) : (
@@ -206,6 +310,9 @@ export default function StudentsScreen() {
                   style={styles.iconButton}
                 >
                   <Users color={theme.colors.success} size={20} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleRegenerateCode(id, s.name)} style={styles.iconButton}>
+                  <RefreshCw color="#F59E0B" size={20} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleShareLink(s, id)} style={styles.iconButton}>
                   <Share2 color={theme.colors.primary} size={20} />
@@ -265,28 +372,28 @@ export default function StudentsScreen() {
                 style={styles.input}
                 placeholder="YYYY-MM-DD"
                 value={dateOfBirth}
-                onChangeText={setDateOfBirth}
+                onChangeText={handleDOBChange}
               />
 
               <View style={styles.inputRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Age *</Text>
+                  <Text style={styles.inputLabel}>Age (Auto-calculated)</Text>
                   <TextInput
-                    style={styles.input}
-                    placeholder="Age"
+                    style={[styles.input, styles.inputDisabled]}
+                    placeholder="Auto-calculated"
                     value={age}
-                    onChangeText={setAge}
-                    keyboardType="number-pad"
+                    editable={false}
                   />
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Grade *</Text>
+                  <Text style={styles.inputLabel}>Grade {teacherClass && '(Auto-filled)'}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, teacherClass && styles.inputDisabled]}
                     placeholder="Grade"
                     value={grade}
                     onChangeText={setGrade}
+                    editable={!teacherClass}
                   />
                 </View>
               </View>
@@ -307,6 +414,33 @@ export default function StudentsScreen() {
                 onChangeText={setParentContact}
                 keyboardType="phone-pad"
               />
+
+              <Text style={styles.inputLabel}>Parent Email (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter parent email"
+                value={parentEmail}
+                onChangeText={setParentEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.inputLabel}>Allergies</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter allergies or 'none'"
+                value={allergies}
+                onChangeText={setAllergies}
+                multiline
+              />
+
+              {teacherClass && (
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoText}>
+                    Student will be automatically assigned to: {teacherClass.className}
+                  </Text>
+                </View>
+              )}
 
               <TouchableOpacity style={styles.submitButton} onPress={handleAdd}>
                 <Text style={styles.submitButtonText}>Add Student</Text>
@@ -356,6 +490,8 @@ export default function StudentsScreen() {
           </View>
         </View>
       </Modal>
+
+      <TeacherBottomNav />
     </View>
   );
 }
@@ -365,25 +501,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
+  addButtonContainer: {
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
   },
   addButton: {
     backgroundColor: theme.colors.primary,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    gap: theme.spacing.xs,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
   },
   searchContainer: {
     padding: theme.spacing.md,
@@ -429,6 +563,48 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.primary,
     marginTop: 4,
+  },
+  accessCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    backgroundColor: `${theme.colors.primary}10`,
+    borderRadius: theme.borderRadius.sm,
+    padding: theme.spacing.xs,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    flexWrap: 'wrap',
+  },
+  accessCodeLabel: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+  },
+  accessCodeValue: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 14,
+    color: theme.colors.primary,
+    letterSpacing: 2,
+  },
+  invalidCodeWarning: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 11,
+    color: '#DC2626',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  allergyTag: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    color: '#DC2626',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
   noClass: {
     fontFamily: 'Inter-Regular',
@@ -536,5 +712,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.primary,
     marginTop: 4,
+  },
+  inputDisabled: {
+    backgroundColor: '#f0f0f0',
+    color: theme.colors.text.secondary,
+  },
+  infoBox: {
+    backgroundColor: '#E0F2FE',
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginTop: theme.spacing.md,
+  },
+  infoText: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: '#0369A1',
   },
 });
