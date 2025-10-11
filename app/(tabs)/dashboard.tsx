@@ -287,7 +287,7 @@ export default function DashboardScreen() {
       {userData?.role !== 'donor' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          {userData?.role === 'teacher' && (
+          {(userData as any)?.role === 'teacher' && (
           <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
             <LinearGradient
               colors={[theme.colors.primary, theme.colors.accent]}

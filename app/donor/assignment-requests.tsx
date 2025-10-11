@@ -18,7 +18,8 @@ import {
   rejectDonationRequest,
   ReadyDonation,
 } from '@/services/firebase/readyDonationService';
-import { getPublishedDonationById, PublishedDonation } from '@/services/firebase/publishedDonationService';
+import { getPublishedDonationById } from '@/services/firebase/publishedDonationService';
+import { PublishedDonation } from '@/types';
 import { getClassById } from '@/services/firebase/classService';
 import { theme } from '@/constants/theme';
 
@@ -47,7 +48,8 @@ export default function AssignmentRequestsScreen() {
         const donation = await getPublishedDonationById(request.publishedDonationId);
         if (!donation || donation.donorId !== user.uid) continue;
 
-        const classInfo = await getClassById(request.classId);
+  // getClassById expects (schoolId, classId)
+  const classInfo = await getClassById(request.schoolId || '', request.classId);
 
         enrichedRequests[id] = {
           ...request,

@@ -14,26 +14,33 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSchoolByPrincipalId } from '@/services/firebase/schoolService';
 import { getAllPublishedDonations } from '@/services/firebase/publishedDonationService';
+import { getAllMoneyDonations, updateMoneyDonation, MoneyDonationRecord } from '@/services/firebase/moneyDonationService';
 import { getClassesBySchoolId } from '@/services/firebase/classService';
 import { createReadyDonation } from '@/services/firebase/readyDonationService';
 import { PublishedDonation, ClassInfo } from '@/types';
-import { Package, MapPin, Calendar, Users, X } from 'lucide-react-native';
+import { Package, MapPin, Calendar, Users, X, DollarSign, CheckCircle } from 'lucide-react-native';
 import PrincipalHeader from '@/components/PrincipalHeader';
 import PrincipalBottomNav from '@/components/PrincipalBottomNav';
 
 export default function DonorListScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [donations, setDonations] = useState<Record<string, PublishedDonation>>({});
+  const [moneyDonations, setMoneyDonations] = useState<Record<string, MoneyDonationRecord>>({});
   const [classes, setClasses] = useState<Record<string, ClassInfo>>({});
   const [schoolId, setSchoolId] = useState<string>('');
   const [schoolName, setSchoolName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'food' | 'money'>('food');
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedDonation, setSelectedDonation] = useState<{
     id: string;
     donation: PublishedDonation;
+  } | null>(null);
+  const [selectedMoneyDonation, setSelectedMoneyDonation] = useState<{
+    id: string;
+    donation: MoneyDonationRecord;
   } | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [studentsToAssign, setStudentsToAssign] = useState<string>('');
@@ -52,25 +59,38 @@ export default function DonorListScreen() {
         return;
       }
 
-      setSchoolId(schoolData.id);
-      setSchoolName(schoolData.schoolName);
+  setSchoolId(schoolData.id);
+  // schoolData.school may contain the school object; prefer its name
+  setSchoolName(schoolData.school?.name || '');
 
-      const [donationsData, classesData] = await Promise.all([
+      const [donationsData, moneyDonationsData, classesData] = await Promise.all([
         getAllPublishedDonations(),
+        getAllMoneyDonations(),
         getClassesBySchoolId(schoolData.id),
       ]);
 
+      // Filter for available food donations only (not completed)
       const availableDonations: Record<string, PublishedDonation> = {};
       Object.entries(donationsData).forEach(([id, donation]) => {
         if (
           donation.status === 'available' &&
+          donation.category !== 'monetary' &&
           (donation.remainingStudents ?? donation.numberOfStudents ?? 0) > 0
         ) {
           availableDonations[id] = donation;
         }
       });
 
+      // Filter for available money donations only (not accepted/completed)
+      const availableMoneyDonations: Record<string, MoneyDonationRecord> = {};
+      Object.entries(moneyDonationsData).forEach(([id, moneyDonation]) => {
+        if (!moneyDonation.acceptedBy) {
+          availableMoneyDonations[id] = moneyDonation;
+        }
+      });
+
       setDonations(availableDonations);
+      setMoneyDonations(availableMoneyDonations);
       setClasses(classesData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -87,9 +107,46 @@ export default function DonorListScreen() {
 
   const handleAssignClass = (donationId: string, donation: PublishedDonation) => {
     setSelectedDonation({ id: donationId, donation });
+    setSelectedMoneyDonation(null);
     setAssignModalVisible(true);
     setSelectedClassId('');
     setStudentsToAssign('');
+  };
+
+  const handleAcceptMoneyDonation = async (donationId: string, donation: MoneyDonationRecord) => {
+    if (!user || !userData) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
+    Alert.alert(
+      'Accept Monetary Donation',
+      `Accept $${donation.amount} from ${donation.donorName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Accept',
+          onPress: async () => {
+            try {
+              await updateMoneyDonation(donationId, {
+                acceptedBy: user.uid,
+                acceptedByName: userData.name,
+                acceptedBySchool: schoolName,
+                acceptedBySchoolId: schoolId,
+                acceptedAt: new Date().toISOString(),
+                status: 'accepted',
+              });
+
+              Alert.alert('Success', 'Monetary donation accepted successfully!');
+              await loadData();
+            } catch (error) {
+              console.error('Error accepting money donation:', error);
+              Alert.alert('Error', 'Failed to accept donation. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleConfirmAssignment = async () => {
@@ -188,102 +245,182 @@ export default function DonorListScreen() {
     <View style={styles.container}>
       <PrincipalHeader title="Published Donations" showBack={true} />
 
+      {/* Tab selector for Food and Money */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'food' && styles.tabActive]}
+          onPress={() => setActiveTab('food')}
+        >
+          <Package size={20} color={activeTab === 'food' ? '#007AFF' : '#666'} />
+          <Text style={[styles.tabText, activeTab === 'food' && styles.tabTextActive]}>
+            Food Donations
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'money' && styles.tabActive]}
+          onPress={() => setActiveTab('money')}
+        >
+          <DollarSign size={20} color={activeTab === 'money' ? '#007AFF' : '#666'} />
+          <Text style={[styles.tabText, activeTab === 'money' && styles.tabTextActive]}>
+            Money Donations
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {Object.keys(donations).length === 0 ? (
-          <View style={styles.emptyState}>
-            <Package color="#999" size={64} />
-            <Text style={styles.emptyText}>No published donations available</Text>
-          </View>
-        ) : (
-          <View style={styles.donationsContainer}>
-            {Object.entries(donations).map(([id, donation]) => {
-              const remainingStudents =
-                donation.remainingStudents ?? donation.numberOfStudents ?? 0;
+        {activeTab === 'food' ? (
+          Object.keys(donations).length === 0 ? (
+            <View style={styles.emptyState}>
+              <Package color="#999" size={64} />
+              <Text style={styles.emptyText}>No food donations available</Text>
+            </View>
+          ) : (
+            <View style={styles.donationsContainer}>
+              {Object.entries(donations).map(([id, donation]) => {
+                const remainingStudents =
+                  donation.remainingStudents ?? donation.numberOfStudents ?? 0;
 
-              return (
-                <View key={id} style={styles.donationCard}>
-                  <View style={styles.donationHeader}>
-                    <View style={styles.donorInfo}>
-                      <Text style={styles.donorName}>{donation.donorName}</Text>
-                      <Text style={styles.donorEmail}>{donation.donorEmail}</Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.categoryBadge,
-                        donation.category === 'food' && styles.foodBadge,
-                        donation.category === 'monetary' && styles.monetaryBadge,
-                      ]}
-                    >
-                      <Text style={styles.categoryText}>{donation.category}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{donation.itemName}</Text>
-                    <Text style={styles.itemDescription}>{donation.description}</Text>
-                    <Text style={styles.itemQuantity}>
-                      Quantity: {donation.quantity} {donation.unit}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailsRow}>
-                    <View style={styles.detailItem}>
-                      <Users color="#666" size={16} />
-                      <Text style={styles.detailText}>
-                        {remainingStudents} students available
-                      </Text>
-                    </View>
-                  </View>
-
-                  {donation.location && (
-                    <View style={styles.detailsRow}>
-                      <View style={styles.detailItem}>
-                        <MapPin color="#666" size={16} />
-                        <Text style={styles.detailText}>{donation.location}</Text>
+                return (
+                  <View key={id} style={styles.donationCard}>
+                    <View style={styles.donationHeader}>
+                      <View style={styles.donorInfo}>
+                        <Text style={styles.donorName}>{donation.donorName}</Text>
+                        <Text style={styles.donorEmail}>{donation.donorEmail}</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.categoryBadge,
+                          donation.category === 'food' && styles.foodBadge,
+                          donation.category === 'supplies' && styles.suppliesBadge,
+                        ]}
+                      >
+                        <Text style={styles.categoryText}>{donation.category}</Text>
                       </View>
                     </View>
-                  )}
 
-                  <View style={styles.detailsRow}>
-                    <View style={styles.detailItem}>
-                      <Calendar color="#666" size={16} />
-                      <Text style={styles.detailText}>
-                        Available from: {new Date(donation.availableFrom).toLocaleDateString()}
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{donation.itemName}</Text>
+                      <Text style={styles.itemDescription}>{donation.description}</Text>
+                      <Text style={styles.itemQuantity}>
+                        Quantity: {donation.quantity} {donation.unit}
                       </Text>
                     </View>
-                  </View>
 
-                  {donation.expiryDate && (
                     <View style={styles.detailsRow}>
                       <View style={styles.detailItem}>
-                        <Calendar color="#FF6B6B" size={16} />
-                        <Text style={[styles.detailText, styles.expiryText]}>
-                          Expires: {new Date(donation.expiryDate).toLocaleDateString()}
+                        <Users color="#666" size={16} />
+                        <Text style={styles.detailText}>
+                          {remainingStudents} students available
                         </Text>
                       </View>
                     </View>
-                  )}
 
-                  {donation.monetaryValue && (
-                    <View style={styles.monetaryValue}>
-                      <Text style={styles.monetaryLabel}>Monetary Value:</Text>
-                      <Text style={styles.monetaryAmount}>${donation.monetaryValue}</Text>
+                    {donation.location && (
+                      <View style={styles.detailsRow}>
+                        <View style={styles.detailItem}>
+                          <MapPin color="#666" size={16} />
+                          <Text style={styles.detailText}>{donation.location}</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    <View style={styles.detailsRow}>
+                      <View style={styles.detailItem}>
+                        <Calendar color="#666" size={16} />
+                        <Text style={styles.detailText}>
+                          Available from: {new Date(donation.availableFrom).toLocaleDateString()}
+                        </Text>
+                      </View>
                     </View>
-                  )}
 
-                  <TouchableOpacity
-                    style={styles.assignButton}
-                    onPress={() => handleAssignClass(id, donation)}
-                  >
-                    <Text style={styles.assignButtonText}>Request for Class</Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
+                    {donation.expiryDate && (
+                      <View style={styles.detailsRow}>
+                        <View style={styles.detailItem}>
+                          <Calendar color="#FF6B6B" size={16} />
+                          <Text style={[styles.detailText, styles.expiryText]}>
+                            Expires: {new Date(donation.expiryDate).toLocaleDateString()}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {donation.monetaryValue && (
+                      <View style={styles.monetaryValue}>
+                        <Text style={styles.monetaryLabel}>Monetary Value:</Text>
+                        <Text style={styles.monetaryAmount}>${donation.monetaryValue}</Text>
+                      </View>
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.assignButton}
+                      onPress={() => handleAssignClass(id, donation)}
+                    >
+                      <Text style={styles.assignButtonText}>Request for Class</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )
+        ) : (
+          /* Money Donations Tab */
+          Object.keys(moneyDonations).length === 0 ? (
+            <View style={styles.emptyState}>
+              <DollarSign color="#999" size={64} />
+              <Text style={styles.emptyText}>No monetary donations available</Text>
+            </View>
+          ) : (
+            <View style={styles.donationsContainer}>
+              {Object.entries(moneyDonations)
+                .sort(([, a], [, b]) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
+                .map(([id, moneyDonation]) => (
+                  <View key={id} style={styles.donationCard}>
+                    <View style={styles.donationHeader}>
+                      <View style={styles.donorInfo}>
+                        <Text style={styles.donorName}>{moneyDonation.donorName}</Text>
+                        <Text style={styles.donorEmail}>{moneyDonation.donorEmail}</Text>
+                      </View>
+                      <View style={styles.monetaryBadge}>
+                        <DollarSign size={16} color="#FF9500" />
+                        <Text style={styles.categoryText}>Money</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.moneyAmountContainer}>
+                      <Text style={styles.moneyAmount}>${moneyDonation.amount}</Text>
+                      <Text style={styles.moneyLabel}>Available Amount</Text>
+                    </View>
+
+                    {moneyDonation.note && (
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.noteLabel}>Note:</Text>
+                        <Text style={styles.itemDescription}>{moneyDonation.note}</Text>
+                      </View>
+                    )}
+
+                    <View style={styles.detailsRow}>
+                      <View style={styles.detailItem}>
+                        <Calendar color="#666" size={16} />
+                        <Text style={styles.detailText}>
+                          Available from: {new Date(moneyDonation.availableFrom || moneyDonation.createdAt || '').toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.acceptButton}
+                      onPress={() => handleAcceptMoneyDonation(id, moneyDonation)}
+                    >
+                      <CheckCircle size={20} color="#fff" />
+                      <Text style={styles.acceptButtonText}>Accept Donation</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+            </View>
+          )
         )}
       </ScrollView>
 
@@ -382,6 +519,33 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  tabActive: {
+    borderBottomWidth: 3,
+    borderBottomColor: '#007AFF',
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#666',
+  },
+  tabTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
   loadingText: {
     textAlign: 'center',
     marginTop: 40,
@@ -438,7 +602,13 @@ const styles = StyleSheet.create({
   foodBadge: {
     backgroundColor: '#E8F5E9',
   },
+  suppliesBadge: {
+    backgroundColor: '#E3F2FD',
+  },
   monetaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#FFF3E0',
   },
   categoryText: {
@@ -468,6 +638,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '500',
+  },
+  noteLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#999',
+    marginBottom: 4,
+  },
+  moneyAmountContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginBottom: 12,
+    backgroundColor: '#FFF9E6',
+    borderRadius: 8,
+  },
+  moneyAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#FF9500',
+    marginBottom: 4,
+  },
+  moneyLabel: {
+    fontSize: 14,
+    color: '#666',
   },
   detailsRow: {
     marginBottom: 8,
@@ -513,6 +706,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   assignButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  acceptButton: {
+    flexDirection: 'row',
+    backgroundColor: '#34C759',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  acceptButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',

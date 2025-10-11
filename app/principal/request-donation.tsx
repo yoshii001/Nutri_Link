@@ -61,18 +61,51 @@ export default function RequestDonationScreen() {
   };
 
   const handleSubmit = async () => {
-    if (
-      !formData.requestedAmount ||
-      !formData.purpose ||
-      !formData.description ||
-      !formData.targetDate
-    ) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    // Validate all required fields
+    if (!formData.purpose || formData.purpose.trim() === '') {
+      Alert.alert('Validation Error', 'Please enter the purpose of the donation request');
+      return;
+    }
+
+    if (!formData.requestedAmount || formData.requestedAmount.trim() === '') {
+      Alert.alert('Validation Error', 'Please enter the requested amount');
+      return;
+    }
+
+    const amount = parseFloat(formData.requestedAmount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Validation Error', 'Please enter a valid amount greater than 0');
+      return;
+    }
+
+    if (!formData.description || formData.description.trim() === '') {
+      Alert.alert('Validation Error', 'Please provide a description for your request');
+      return;
+    }
+
+    if (!formData.targetDate || formData.targetDate.trim() === '') {
+      Alert.alert('Validation Error', 'Please enter the target date');
+      return;
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(formData.targetDate)) {
+      Alert.alert('Validation Error', 'Please enter date in YYYY-MM-DD format (e.g., 2025-12-31)');
+      return;
+    }
+
+    // Validate that target date is in the future
+    const targetDate = new Date(formData.targetDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (targetDate < today) {
+      Alert.alert('Validation Error', 'Target date must be today or in the future');
       return;
     }
 
     if (!schoolId || !user || !userData) {
-      Alert.alert('Error', 'Missing required data');
+      Alert.alert('Error', 'Missing required data. Please try again.');
       return;
     }
 
@@ -85,9 +118,9 @@ export default function RequestDonationScreen() {
         principalId: user.uid,
         principalName: userData.name,
         mealPlanId: formData.mealPlanId || undefined,
-        requestedAmount: parseFloat(formData.requestedAmount),
-        purpose: formData.purpose,
-        description: formData.description,
+        requestedAmount: amount,
+        purpose: formData.purpose.trim(),
+        description: formData.description.trim(),
         targetDate: formData.targetDate,
         status: 'active',
       });
@@ -97,6 +130,15 @@ export default function RequestDonationScreen() {
         'Donation request has been submitted. Donors can now see and contribute to your request.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
+
+      // Reset form
+      setFormData({
+        requestedAmount: '',
+        purpose: '',
+        description: '',
+        targetDate: '',
+        mealPlanId: '',
+      });
     } catch (error) {
       console.error('Error submitting donation request:', error);
       Alert.alert('Error', 'Failed to submit request. Please try again.');

@@ -358,7 +358,7 @@ export default function DonationRequestsScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() => router.push('/request-donation')}
+          onPress={() => router.push('/principal/request-donation')}
           activeOpacity={0.7}
         >
           <Plus size={24} color={theme.colors.text.secondary} strokeWidth={2} />

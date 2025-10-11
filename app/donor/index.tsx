@@ -67,6 +67,13 @@ export default function DonorIndex() {
       route: '/donor/money',
       colors: ['#8B5CF6', '#7C3AED'],
     },
+    {
+      icon: Star,
+      title: 'View All Requests',
+      subtitle: 'Browse donation requests from schools',
+      route: '/donor/view-requests',
+      colors: ['#F59E0B', '#D97706'],
+    },
   ];
 
   return (
@@ -142,7 +149,7 @@ export default function DonorIndex() {
                 style={styles.menuCard}
               >
                 <LinearGradient
-                  colors={item.colors}
+                  colors={item.colors as any}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.menuCardGradient}
