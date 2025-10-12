@@ -59,68 +59,111 @@ export default function TeacherDashboard() {
     <View style={styles.container}>
       <TeacherHeader title="Teacher Dashboard" subtitle={`Welcome, ${userData?.name || 'Teacher'}`} />
 
-      <ScrollView style={styles.content}>
-        {/* Stock Summary Card */}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Enhanced Stock Summary Card */}
         {!loading && (
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Meal Stock Overview</Text>
+            <View style={styles.summaryHeader}>
+              <Text style={styles.summaryTitle}>Meal Stock Overview</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Live</Text>
+              </View>
+            </View>
+            
             <View style={styles.summaryStats}>
-              <View style={styles.statBox}>
-                <Package size={24} color={theme.colors.primary} />
+              <View style={styles.statCard}>
+                <View style={styles.statIconContainer}>
+                  <Package size={24} color={theme.colors.primary} />
+                </View>
                 <Text style={styles.statValue}>{mealStockCount}</Text>
                 <Text style={styles.statLabel}>Total Meals</Text>
+                <View style={styles.statDivider} />
               </View>
-              <View style={styles.statBox}>
-                <Users size={24} color={theme.colors.success} />
-                <Text style={styles.statValue}>{totalCoverage}</Text>
+              
+              <View style={styles.statCard}>
+                <View style={[styles.statIconContainer, { backgroundColor: theme.colors.success + '15' }]}>
+                  <Users size={24} color={theme.colors.success} />
+                </View>
+                <Text style={[styles.statValue, { color: theme.colors.success }]}>{totalCoverage}</Text>
                 <Text style={styles.statLabel}>Can Serve</Text>
+                <View style={[styles.statDivider, { backgroundColor: theme.colors.success }]} />
               </View>
             </View>
+            
             <View style={styles.stockInfo}>
               <Text style={styles.stockInfoText}>
-                Includes meals from approved meal plans and claimed donations
+                📦 Includes approved meal plans and claimed donations
               </Text>
             </View>
+            
             <TouchableOpacity 
               style={styles.viewStockButton}
               onPress={() => router.push('/teacher/meal-stock' as any)}
+              activeOpacity={0.8}
             >
               <Text style={styles.viewStockButtonText}>View Full Stock</Text>
+              <Text style={styles.viewStockArrow}>→</Text>
             </TouchableOpacity>
           </View>
         )}
 
+        {/* Quick Actions Section */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/claim-meal' as any)}>
-            <Package size={32} color={theme.colors.primary} />
-            <Text style={styles.cardTitle}>Claim Meals</Text>
-            <Text style={styles.cardDesc}>View and claim available donations for your class</Text>
-          </TouchableOpacity>
+          <View style={styles.cardRow}>
+            <TouchableOpacity 
+              style={[styles.card, styles.cardSmall]} 
+              onPress={() => router.push('/teacher/claim-meal' as any)}
+              activeOpacity={0.9}
+            >
+              <View style={styles.cardIconSmall}>
+                <Package size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.cardTitle}>Claim Meals</Text>
+              <Text style={styles.cardDesc}>View and claim donations</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/students' as any)}>
-            <Users size={32} color={theme.colors.primary} />
-            <Text style={styles.cardTitle}>Manage Students</Text>
-            <Text style={styles.cardDesc}>Add or view student profiles and share links</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.card, styles.cardSmall]} 
+              onPress={() => router.push('/teacher/students' as any)}
+              activeOpacity={0.9}
+            >
+              <View style={styles.cardIconSmall}>
+                <Users size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.cardTitle}>Manage Students</Text>
+              <Text style={styles.cardDesc}>Add or view profiles</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/serve-meals' as any)}>
-            <UtensilsCrossed size={32} color={theme.colors.primary} />
-            <Text style={styles.cardTitle}>Serve Meals</Text>
-            <Text style={styles.cardDesc}>Mark meals served to students</Text>
-          </TouchableOpacity>
+          <View style={styles.cardRow}>
+            <TouchableOpacity 
+              style={[styles.card, styles.cardSmall]} 
+              onPress={() => router.push('/teacher/serve-meals' as any)}
+              activeOpacity={0.9}
+            >
+              <View style={styles.cardIconSmall}>
+                <UtensilsCrossed size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.cardTitle}>Serve Meals</Text>
+              <Text style={styles.cardDesc}>Mark meals served</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/attendance' as any)}>
-            <ClipboardCheck size={32} color={theme.colors.primary} />
-            <Text style={styles.cardTitle}>Mark Attendance & Feedback</Text>
-            <Text style={styles.cardDesc}>Track daily attendance and give feedback</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.card} onPress={() => router.push('/teacher/reports' as any)}>
-            <BarChart size={32} color={theme.colors.primary} />
-            <Text style={styles.cardTitle}>Monthly Reports</Text>
-            <Text style={styles.cardDesc}>View performance and attendance summaries</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.card, styles.cardSmall]} 
+              onPress={() => router.push('/teacher/reports' as any)}
+              activeOpacity={0.9}
+            >
+              <View style={styles.cardIconSmall}>
+                <BarChart size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.cardTitle}>Monthly Reports</Text>
+              <Text style={styles.cardDesc}>View attendance</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        
+        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       <TeacherBottomNav />
@@ -141,89 +184,161 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.md,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.xl,
+    borderRadius: theme.borderRadius.xl,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
   },
   summaryTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
     color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
+  },
+  badge: {
+    backgroundColor: theme.colors.success + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.success,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   summaryStats: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: theme.spacing.md,
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
-  statBox: {
+  statCard: {
+    flex: 1,
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
+  statIconContainer: {
+    backgroundColor: theme.colors.primary + '15',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
   statValue: {
-    fontSize: 28,
+    fontSize: 32,
     fontFamily: 'Inter-Bold',
     color: theme.colors.primary,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.text.secondary,
     fontFamily: 'Inter-Medium',
   },
-  viewStockButton: {
+  statDivider: {
+    width: 30,
+    height: 3,
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-  },
-  viewStockButtonText: {
-    color: theme.colors.surface,
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    borderRadius: 2,
+    marginTop: theme.spacing.xs,
   },
   stockInfo: {
     backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.sm,
-    marginBottom: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
   },
   stockInfoText: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.text.secondary,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
+    lineHeight: 18,
+  },
+  viewStockButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+  },
+  viewStockButtonText: {
+    color: theme.colors.surface,
+    fontSize: 15,
+    fontFamily: 'Inter-SemiBold',
+  },
+  viewStockArrow: {
+    color: theme.colors.surface,
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.text.primary,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   actions: {
     padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   card: {
     backgroundColor: theme.colors.surface,
-    padding: theme.spacing.xl,
-    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.xl,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-    alignItems: 'flex-start',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  cardSmall: {
+    flex: 1,
+    padding: theme.spacing.lg,
+  },
+  cardIconSmall: {
+    backgroundColor: theme.colors.primary + '15',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: theme.colors.text.primary,
-    marginTop: 8,
+    marginBottom: theme.spacing.xs,
   },
   cardDesc: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.text.secondary,
-    marginTop: 4,
-    lineHeight: 20,
+    lineHeight: 18,
+    fontFamily: 'Inter-Regular',
+  },
+  bottomSpacing: {
+    height: 20,
   },
 });
