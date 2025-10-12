@@ -1,7 +1,7 @@
 // api/create-payment-intent.js - Vercel serverless function
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -40,4 +40,4 @@ export default async function handler(req, res) {
     console.error('Error creating payment intent:', error);
     res.status(500).json({ error: error.message });
   }
-}
+};
