@@ -19,11 +19,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           (config as any)?.extra?.eas?.projectId ?? 'ab335c42-eca5-4775-a437-7d261d898d60',
       },
     },
-    // Expose the Firebase config as public runtime env vars for the app.
-    // Use EXPO_PUBLIC_* prefix so Expo will include them in the JS bundle.
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
+    // In bare workflow, runtimeVersion must be a static string (policy not supported)
+    runtimeVersion: config.version ?? '1.0.0',
     owner: config.owner,
   } as ExpoConfig;
 
