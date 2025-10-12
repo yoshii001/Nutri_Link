@@ -1,0 +1,8 @@
+{
+  "name": "nutrilink-backend",
+  "version": "1.0.0",
+  "main": "api/create-payment-intent.js",
+  "dependencies": {
+    "stripe": "^14.0.0"
+  }
+}
