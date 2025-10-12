@@ -209,11 +209,11 @@ export default function DashboardScreen() {
               ) : (
                 recentMocks.map((r) => (
                   <View key={r.id} style={styles.recentItem}>
-                    <View>
+                    <View style={styles.recentItemLeft}>
                       <Text style={styles.recentItemText}>${r.amount}</Text>
                       <Text style={styles.recentItemMeta}>{r.status} • {r.donorId ? r.donorId : 'You'}</Text>
                     </View>
-                    <Text style={styles.recentItemDate}>{new Date(r.createdAt).toLocaleDateString()}</Text>
+                    <Text style={styles.recentItemDate} numberOfLines={1} ellipsizeMode="clip">{new Date(r.createdAt).toLocaleDateString()}</Text>
                   </View>
                 ))
               )}
@@ -287,7 +287,7 @@ export default function DashboardScreen() {
       {userData?.role !== 'donor' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          {userData?.role === 'teacher' && (
+          {(userData as any)?.role === 'teacher' && (
           <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
             <LinearGradient
               colors={[theme.colors.primary, theme.colors.accent]}
@@ -505,6 +505,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.background,
   },
@@ -512,9 +514,16 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
     fontFamily: 'Inter-SemiBold',
   },
+  recentItemLeft: {
+    flex: 1,
+    paddingRight: theme.spacing.sm,
+  },
   recentItemDate: {
     color: theme.colors.text.secondary,
     fontFamily: 'Inter-Regular',
+    textAlign: 'right',
+    minWidth: 90,
+    flexShrink: 0,
   },
   recentItemMeta: {
     color: theme.colors.text.secondary,

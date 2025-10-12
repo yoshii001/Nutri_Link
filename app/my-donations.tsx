@@ -23,6 +23,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getDonationsByDonorId } from '@/services/firebase/donationService';
 import { getPublishedDonationsByDonorId } from '@/services/firebase/publishedDonationService';
+import { getActiveDonationRequests } from '@/services/firebase/donationRequestService';
 import mockPaymentService from '@/services/mockPaymentService';
 import { Donation, PublishedDonation } from '@/types';
 import { theme } from '@/constants/theme';
@@ -37,6 +38,7 @@ export default function MyDonationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'monetary' | 'published'>('monetary');
   const [mockPayments, setMockPayments] = useState<any[]>([]);
+  const [activeRequestsCount, setActiveRequestsCount] = useState(0);
 
   const loadData = async () => {
     if (!user) return;
@@ -48,6 +50,18 @@ export default function MyDonationsScreen() {
       ]);
       setDonations(donationsData);
       setPublishedDonations(publishedData);
+      // load active donation requests and compute unique schools count
+      try {
+        const activeRequests = await getActiveDonationRequests();
+        const uniqueSchools = new Set<string>();
+        Object.values(activeRequests).forEach((req: any) => {
+          if (req.schoolId) uniqueSchools.add(req.schoolId);
+        });
+        setActiveRequestsCount(uniqueSchools.size);
+      } catch (err) {
+        console.warn('Failed to load active donation requests', err);
+        setActiveRequestsCount(0);
+      }
         try {
           const payments = await mockPaymentService.getAllMockPayments();
           setMockPayments(payments.filter((p: any) => p.donorId === user.uid));
@@ -72,6 +86,7 @@ export default function MyDonationsScreen() {
   const totalDonated = Object.values(donations).reduce((sum, d) => sum + d.amount, 0);
   const totalMeals = Object.values(donations).reduce((sum, d) => sum + d.mealContribution, 0);
   const totalPublished = Object.keys(publishedDonations).length;
+  
 
   return (
     <View style={styles.container}>
@@ -114,6 +129,12 @@ export default function MyDonationsScreen() {
           <Package size={28} color={theme.colors.primary} strokeWidth={2} />
           <Text style={styles.statValue}>{totalPublished}</Text>
           <Text style={styles.statLabel}>Items Published</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Settings size={28} color={theme.colors.primary} strokeWidth={2} />
+          <Text style={styles.statValue}>{activeRequestsCount}</Text>
+          <Text style={styles.statLabel}>Active Requests</Text>
         </View>
       </View>
 
@@ -364,11 +385,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     ...theme.shadows.lg,
   },
   statItem: {
-    flex: 1,
+    width: '50%',
     alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
   },
   statDivider: {
     width: 1,

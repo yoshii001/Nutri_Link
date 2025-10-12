@@ -336,7 +336,7 @@ export default function PublicDonationsScreen() {
                     <View style={{ flexDirection: 'row', marginTop: theme.spacing.md, gap: theme.spacing.sm }}>
                       <TouchableOpacity
                         style={[styles.payNowButton, { backgroundColor: theme.colors.primary }]}
-                        onPress={() => router.push(`/donate/money?editId=${id}`)}
+                        onPress={() => router.push({ pathname: '/donate/money', params: { editId: id } } as any)}
                         activeOpacity={0.85}
                       >
                         <LinearGradient

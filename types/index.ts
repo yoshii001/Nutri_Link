@@ -226,6 +226,12 @@ export interface MoneyDonationRecord {
   note?: string;
   availableFrom?: string;
   createdAt?: string;
+  acceptedBy?: string;
+  acceptedByName?: string;
+  acceptedBySchool?: string;
+  acceptedBySchoolId?: string;
+  acceptedAt?: string;
+  status?: 'available' | 'accepted' | 'completed';
 }
 
 export interface DonationAssignment {
