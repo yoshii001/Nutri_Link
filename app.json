@@ -11,10 +11,6 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
       "package": "com.jordancj7.nutrilink"
     },
     "web": {
@@ -30,10 +26,10 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
       "eas": {
         "projectId": "ab335c42-eca5-4775-a437-7d261d898d60"
-      }
+      },
+      "router": {}
     }
   }
 }
