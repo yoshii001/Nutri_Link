@@ -79,7 +79,11 @@ export default function MyDonationsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          activeOpacity={0.7}
+          onPress={() => router.push('/(tabs)/dashboard')}
+        >
           <ArrowLeft size={24} color={theme.colors.primary} strokeWidth={2} />
           <Text style={styles.backButtonText}>Dashboard</Text>
         </TouchableOpacity>
