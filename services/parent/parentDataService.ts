@@ -3,7 +3,9 @@ import { getMealTrackingByDate } from '@/services/firebase/mealTrackingService';
 import { getReadyDonationsByClassId } from '@/services/firebase/readyDonationService';
 import { getDonorAverageRating } from '@/services/firebase/donorRatingService';
 import { getMealStockByClass } from '@/services/firebase/mealStockService';
-import { StudentProfile } from '@/types';
+import { getMealPlansBySchoolId } from '@/services/firebase/mealPlanService';
+import { getClassById } from '@/services/firebase/classService';
+import { StudentProfile, MealPlan } from '@/types';
 
 export interface TodayMealInfo {
   mealServed: boolean;
@@ -34,6 +36,30 @@ export interface TodayMealStock {
   donorId?: string;
   averageRating: number;
   totalRatings: number;
+}
+
+export interface ScheduledMealInfo {
+  date: string;
+  mealName: string;
+  donorName: string;
+  quantity: number;
+  unit: string;
+  coverage: number;
+  description?: string;
+  claimedAt: string;
+}
+
+export interface ApprovedMealPlan {
+  planId: string;
+  date: string;
+  menu: Array<{
+    mealName: string;
+    quantity: number;
+    ingredients: string[];
+    dietaryRestrictions?: string[];
+  }>;
+  approvedAt?: string;
+  status: string;
 }
 
 export const refreshStudentData = async (accessCode: string): Promise<{
@@ -189,5 +215,78 @@ export const updateAllergiesAndFeedback = async (
   } catch (error) {
     console.error('Error updating allergies and feedback:', error);
     throw error;
+  }
+};
+
+export const getScheduledMeals = async (schoolId: string, classId: string): Promise<ScheduledMealInfo[]> => {
+  try {
+    const mealStocks = await getMealStockByClass(schoolId, classId);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const scheduledMeals: ScheduledMealInfo[] = [];
+
+    Object.entries(mealStocks).forEach(([dateId, meal]) => {
+      const mealDate = dateId.split('_')[0];
+      const mealDateTime = new Date(mealDate);
+      mealDateTime.setHours(0, 0, 0, 0);
+
+      if (mealDateTime >= today) {
+        scheduledMeals.push({
+          date: mealDate,
+          mealName: meal.mealName,
+          donorName: meal.donorName,
+          quantity: meal.quantity,
+          unit: meal.unit,
+          coverage: meal.coverage,
+          description: meal.description,
+          claimedAt: meal.claimedAt,
+        });
+      }
+    });
+
+    scheduledMeals.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return scheduledMeals.slice(0, 7);
+  } catch (error) {
+    console.error('Error getting scheduled meals:', error);
+    return [];
+  }
+};
+
+export const getSchoolIdFromClass = async (teacherSchoolId: string, classId: string): Promise<string> => {
+  try {
+    const classInfo = await getClassById(teacherSchoolId, classId);
+    return classInfo?.schoolId || teacherSchoolId;
+  } catch (error) {
+    console.error('Error getting school ID from class:', error);
+    return teacherSchoolId;
+  }
+};
+
+export const getApprovedMealPlans = async (schoolId: string): Promise<ApprovedMealPlan[]> => {
+  try {
+    const allPlans = await getMealPlansBySchoolId(schoolId);
+    const approvedPlans: ApprovedMealPlan[] = [];
+    const today = new Date();
+
+    Object.entries(allPlans).forEach(([planId, plan]) => {
+      if (plan.status === 'approved') {
+        const planDate = new Date(plan.date);
+        if (planDate >= today) {
+          approvedPlans.push({
+            planId,
+            date: plan.date,
+            menu: plan.menu,
+            approvedAt: plan.approvedAt,
+            status: plan.status,
+          });
+        }
+      }
+    });
+
+    approvedPlans.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return approvedPlans.slice(0, 5);
+  } catch (error) {
+    console.error('Error getting approved meal plans:', error);
+    return [];
   }
 };

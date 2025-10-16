@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock, Utensils } from 'lucide-react-native';
@@ -48,7 +48,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.accent]}
         start={{ x: 0, y: 0 }}
@@ -73,7 +77,11 @@ export default function LoginScreen() {
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.formCard}>
           <Text style={styles.welcomeText}>Welcome Back</Text>
           <Text style={styles.welcomeSubtext}>Sign in to continue</Text>
@@ -195,7 +203,7 @@ export default function LoginScreen() {
           <Text style={styles.testNote}>Use any password for testing</Text>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
