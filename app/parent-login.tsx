@@ -7,6 +7,8 @@ import {
   TextInput,
   Platform,
   Alert,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -60,74 +62,83 @@ export default function ParentLoginScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
+      <LinearGradient
+        colors={['#10B981', '#059669']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color={theme.colors.primary} strokeWidth={2} />
-          <Text style={styles.backButtonText}>Back</Text>
+          <ArrowLeft size={24} color="#FFFFFF" strokeWidth={2.5} />
         </TouchableOpacity>
-      </View>
-
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.accent]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <Heart size={64} color={theme.colors.surface} strokeWidth={2} />
+        <Heart size={56} color="#FFFFFF" strokeWidth={2.5} />
         <Text style={styles.headerTitle}>Parent Portal</Text>
-        <Text style={styles.headerSubtitle}>Enter your access code to view your child's meal info</Text>
+        <Text style={styles.headerSubtitle}>Enter your access code</Text>
       </LinearGradient>
 
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.label}>Access Code</Text>
-          <Text style={styles.hint}>Enter the 8-character access code provided by your child's teacher</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
 
-          <TextInput
-            style={styles.input}
-            value={accessCode}
-            onChangeText={(text) => setAccessCode(text)}
-            placeholder="XXXXXXX$"
-            placeholderTextColor={theme.colors.text.light}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={8}
-          />
+          <View style={styles.content}>
+            <View style={styles.card}>
+              <Text style={styles.label}>Access Code</Text>
+              <Text style={styles.hint}>Enter the code from your teacher</Text>
 
-          <Text style={styles.example}>7 capital letters + 1 symbol ($, @, #, or *)</Text>
+              <TextInput
+                style={styles.input}
+                value={accessCode}
+                onChangeText={(text) => setAccessCode(text)}
+                placeholder="XXXXXXX$"
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={8}
+              />
 
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={loading ? ['#9CA3AF', '#9CA3AF'] : [theme.colors.primary, theme.colors.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.loginButtonGradient}
-            >
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Logging in...' : 'Access Portal'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <Text style={styles.example}>7 letters + 1 symbol ($, @, #, *)</Text>
 
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>What can you do in the Parent Portal?</Text>
-            <Text style={styles.infoItem}>• View your child's information</Text>
-            <Text style={styles.infoItem}>• See today's meal and donor details</Text>
-            <Text style={styles.infoItem}>• Update allergy information</Text>
-            <Text style={styles.infoItem}>• Provide meal feedback</Text>
-            <Text style={styles.infoItem}>• Rate donors</Text>
+              <TouchableOpacity
+                style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={loading ? ['#9CA3AF', '#9CA3AF'] : ['#10B981', '#059669']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.loginButtonGradient}
+                >
+                  <Text style={styles.loginButtonText}>
+                    {loading ? 'Logging in...' : 'Enter Portal'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <View style={styles.infoBox}>
+                <Text style={styles.infoTitle}>You can:</Text>
+                <Text style={styles.infoItem}>✓ See today's meal</Text>
+                <Text style={styles.infoItem}>✓ Rate the food</Text>
+                <Text style={styles.infoItem}>✓ Update allergies</Text>
+                <Text style={styles.infoItem}>✓ Give feedback</Text>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -135,126 +146,129 @@ export default function ParentLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    paddingTop: 50,
-    paddingBottom: 12,
-    paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    ...theme.shadows.sm,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: theme.colors.primary,
+    backgroundColor: '#F3F4F6',
   },
   header: {
     paddingTop: 60,
-    paddingBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
     alignItems: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    padding: 8,
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 32,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.surface,
-    marginTop: theme.spacing.md,
+    color: '#FFFFFF',
+    marginTop: 16,
   },
   headerSubtitle: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.surface,
-    opacity: 0.9,
-    marginTop: theme.spacing.xs,
+    color: '#FFFFFF',
+    opacity: 0.95,
+    marginTop: 8,
     textAlign: 'center',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   content: {
-    flex: 1,
-    padding: theme.spacing.xl,
+    padding: 20,
   },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    ...theme.shadows.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   label: {
-    fontSize: 18,
+    fontSize: 22,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
+    color: '#111827',
+    marginBottom: 8,
   },
   hint: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.lg,
+    color: '#6B7280',
+    marginBottom: 20,
   },
   input: {
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    fontSize: 24,
+    borderWidth: 3,
+    borderColor: '#10B981',
+    borderRadius: 16,
+    padding: 20,
+    fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
+    color: '#111827',
     textAlign: 'center',
-    letterSpacing: 8,
-    marginBottom: theme.spacing.sm,
+    letterSpacing: 10,
+    marginBottom: 12,
+    backgroundColor: '#F9FAFB',
   },
   example: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.text.light,
+    color: '#9CA3AF',
     textAlign: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: 28,
   },
   loginButton: {
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 16,
     overflow: 'hidden',
-    ...theme.shadows.md,
-    marginBottom: theme.spacing.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 24,
   },
   loginButtonDisabled: {
     opacity: 0.6,
   },
   loginButtonGradient: {
-    paddingVertical: theme.spacing.md,
+    paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   loginButtonText: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.surface,
+    color: '#FFFFFF',
   },
   infoBox: {
-    backgroundColor: `${theme.colors.primary}10`,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 16,
+    padding: 20,
   },
   infoTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
+    color: '#111827',
+    marginBottom: 12,
   },
   infoItem: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-    lineHeight: 20,
+    color: '#374151',
+    marginBottom: 8,
+    lineHeight: 22,
   },
 });
