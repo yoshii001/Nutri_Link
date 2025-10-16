@@ -9,6 +9,7 @@ import { getAllFeedback } from '@/services/firebase/feedbackService';
 import { TrendingUp, Users, DollarSign, MessageSquare } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
 import mockPaymentService, { MockPaymentRecord } from '@/services/mockPaymentService';
+import DonorBadge from '@/components/DonorBadge';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -161,9 +162,13 @@ export default function DashboardScreen() {
           </LinearGradient>
 
           <View style={styles.summaryRow}>
+            {/* Donor badge: shows tier and progress toward next level */}
+            <View style={{ flexBasis: '100%', marginBottom: theme.spacing.sm }}>
+              <DonorBadge totalDonated={donorMetrics.total} />
+            </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Total Donated</Text>
-              <Text style={styles.summaryValue}>${userData?.role === 'donor' ? donorMetrics.total : stats.totalDonations}</Text>
+              <Text style={styles.summaryValue}>Rs.{userData?.role === 'donor' ? donorMetrics.total : stats.totalDonations}</Text>
             </View>
 
             <View style={styles.summaryCard}>
@@ -178,7 +183,7 @@ export default function DashboardScreen() {
 
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Last Donation</Text>
-              <Text style={styles.summaryValue}>{userData?.role === 'donor' && donorMetrics.last ? `$${donorMetrics.last.amount}` : '—'}</Text>
+              <Text style={styles.summaryValue}>{userData?.role === 'donor' && donorMetrics.last ? 'Rs.' + donorMetrics.last.amount : '—'}</Text>
               {userData?.role === 'donor' && donorMetrics.last && (
                 <Text style={styles.recentItemMeta}>{new Date(donorMetrics.last.date).toLocaleDateString()}</Text>
               )}
@@ -210,7 +215,7 @@ export default function DashboardScreen() {
                 recentMocks.map((r) => (
                   <View key={r.id} style={styles.recentItem}>
                     <View style={styles.recentItemLeft}>
-                      <Text style={styles.recentItemText}>${r.amount}</Text>
+                      <Text style={styles.recentItemText}>Rs.{r.amount}</Text>
                       <Text style={styles.recentItemMeta}>{r.status} • {r.donorId ? r.donorId : 'You'}</Text>
                     </View>
                     <Text style={styles.recentItemDate} numberOfLines={1} ellipsizeMode="clip">{new Date(r.createdAt).toLocaleDateString()}</Text>
@@ -262,7 +267,7 @@ export default function DashboardScreen() {
             <View style={styles.statIconContainer}>
               <DollarSign color={theme.colors.surface} size={28} strokeWidth={2.5} />
             </View>
-            <Text style={styles.statValue}>${stats.totalDonations}</Text>
+            <Text style={styles.statValue}>Rs.{stats.totalDonations}</Text>
             <Text style={styles.statLabel}>Total Donations</Text>
           </LinearGradient>
         </View>

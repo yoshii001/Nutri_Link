@@ -23,6 +23,8 @@ export default function DonationRequestsScreen() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<Record<string, ReadyDonation>>({});
   const [myDonations, setMyDonations] = useState<Record<string, PublishedDonation>>({});
+  const [approvedRequests, setApprovedRequests] = useState<Record<string, ReadyDonation>>({});
+  const [viewMode, setViewMode] = useState<'requests' | 'approved'>('requests');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<{
     id: string;
@@ -40,7 +42,8 @@ export default function DonationRequestsScreen() {
         getPublishedDonationsByDonorId(user.uid),
       ]);
 
-      const requestsForThisDonor: Record<string, ReadyDonation> = {};
+  const requestsForThisDonor: Record<string, ReadyDonation> = {};
+  const approvedForThisDonor: Record<string, ReadyDonation> = {};
 
       for (const [id, request] of Object.entries(allReadyDonations)) {
         if (request.status === 'pending') {
@@ -72,12 +75,37 @@ export default function DonationRequestsScreen() {
             }
 
             requestsForThisDonor[id] = enrichedRequest;
+            }
           }
+          // collect approved requests referencing this donor's published donations
+          else if (request.status === 'approved') {
+            const publishedDonation = donationsData[request.publishedDonationId];
+            if (publishedDonation && publishedDonation.donorId === user.uid) {
+              const enrichedRequest = { ...request } as ReadyDonation & any;
+              try {
+                if (request.classId && request.principalId) {
+                  const { getSchoolByPrincipalId } = await import('@/services/firebase/schoolService');
+                  const schoolData = await getSchoolByPrincipalId(request.principalId);
+                  if (schoolData) {
+                    enrichedRequest.schoolId = schoolData.id;
+                    enrichedRequest.schoolName = schoolData.school.name;
+                    enrichedRequest.principalName = schoolData.school.principalName;
+                    const { getClassById } = await import('@/services/firebase/classService');
+                    const classData = await getClassById(schoolData.id, request.classId);
+                    if (classData) enrichedRequest.className = classData.className;
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching school/class data for approved:', error);
+              }
+              approvedForThisDonor[id] = enrichedRequest;
+            }
         }
       }
 
-      setRequests(requestsForThisDonor);
-      setMyDonations(donationsData);
+        setRequests(requestsForThisDonor);
+        setApprovedRequests(approvedForThisDonor);
+        setMyDonations(donationsData);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -164,14 +192,15 @@ export default function DonationRequestsScreen() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {Object.keys(requests).length === 0 ? (
+        {viewMode === 'requests' ? (
+          Object.keys(requests).length === 0 ? (
           <View style={styles.emptyState}>
             <Bell size={64} color={theme.colors.text.light} strokeWidth={1.5} />
             <Text style={styles.emptyText}>No active requests</Text>
             <Text style={styles.emptySubtext}>Check back later for schools in need</Text>
           </View>
-        ) : (
-          Object.entries(requests)
+          ) : (
+            Object.entries(requests)
             .sort(
               ([, a], [, b]) =>
                 new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -252,6 +281,66 @@ export default function DonationRequestsScreen() {
                 </TouchableOpacity>
               );
             })
+          )
+        ) : (
+          // Approved schools view
+          Object.keys(approvedRequests).length === 0 ? (
+            <View style={styles.emptyState}>
+              <Bell size={64} color={theme.colors.text.light} strokeWidth={1.5} />
+              <Text style={styles.emptyText}>No approved schools yet</Text>
+              <Text style={styles.emptySubtext}>Approved requests will appear here</Text>
+            </View>
+          ) : (
+            Object.entries(approvedRequests)
+              .sort(([, a], [, b]) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .map(([id, request]) => {
+                const publishedDonation = myDonations[request.publishedDonationId];
+                return (
+                  <View key={id} style={[styles.card]}>
+                    <View style={styles.cardHeader}>
+                      <View style={styles.schoolInfo}>
+                        <School size={24} color={theme.colors.primary} />
+                        <View style={styles.schoolDetails}>
+                          <Text style={styles.schoolName}>{request.schoolName || 'School'}</Text>
+                          <Text style={styles.principalName}>Principal: {request.principalName || 'N/A'}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.requestDetails}>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Donation Type:</Text>
+                        <Text style={styles.detailValue}>{publishedDonation?.category || 'N/A'}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Status:</Text>
+                        <Text style={styles.detailValue}>{request.status}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.cardFooter}>
+                      <View style={styles.dateInfo}>
+                        <Calendar size={16} color={theme.colors.text.light} />
+                        <Text style={styles.dateText}>
+                          Approved on {new Date(request.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.actionButtons}> 
+                      <TouchableOpacity
+                        style={styles.viewButton}
+                        onPress={() => setSelectedRequest({ id, request })}
+                        activeOpacity={0.8}
+                      >
+                        <Heart size={18} color={theme.colors.surface} />
+                        <Text style={styles.viewButtonText}>View Details</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+          )
         )}
       </ScrollView>
 
@@ -358,11 +447,11 @@ export default function DonationRequestsScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() => router.push('/principal/request-donation')}
+          onPress={() => setViewMode(viewMode === 'requests' ? 'approved' : 'requests')}
           activeOpacity={0.7}
         >
-          <Plus size={24} color={theme.colors.text.secondary} strokeWidth={2} />
-          <Text style={styles.navButtonText}>New Request</Text>
+          <Heart size={24} color={theme.colors.text.secondary} strokeWidth={2} />
+          <Text style={styles.navButtonText}>{viewMode === 'requests' ? 'Approved Schools' : 'Requests'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -413,6 +502,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: theme.colors.text.secondary,
     marginTop: 4,
+  },
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+  },
+  viewButtonText: {
+    color: theme.colors.surface,
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    marginLeft: theme.spacing.xs,
   },
   header: {
     paddingTop: 60,

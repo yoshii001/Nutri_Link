@@ -298,7 +298,7 @@ export default function PublicDonationsScreen() {
                     </View>
                   </View>
 
-                  <Text style={styles.itemName}>${donation.amount.toFixed(2)}</Text>
+                  <Text style={styles.itemName}>Rs.{donation.amount.toFixed(2)}</Text>
 
                   <Text style={styles.description} numberOfLines={2}>
                     {donation.note || 'Monetary donation available'}
@@ -315,39 +315,61 @@ export default function PublicDonationsScreen() {
                       Available from {new Date(donation.availableFrom || donation.createdAt || '').toLocaleDateString()}
                     </Text>
                   </View>
-                <View style={{ marginTop: theme.spacing.md }}>
-                  <TouchableOpacity
-                    style={styles.payNowButton}
-                    onPress={() => router.push({ pathname: '/pay-money/[id]', params: { id } })}
-                    activeOpacity={0.85}
-                  >
-                    <LinearGradient
-                      colors={[theme.colors.primary, theme.colors.accent]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.payNowGradient}
+                {/* Show Pay Now only if a principal has accepted this money donation */}
+                {(donation.status === 'accepted' || donation.acceptedBy) && (
+                  <View style={{ marginTop: theme.spacing.md }}>
+                    <TouchableOpacity
+                      style={styles.payNowButton}
+                      onPress={() => router.push({ pathname: '/pay-money/[id]', params: { id } })}
+                      activeOpacity={0.85}
                     >
-                      <Text style={styles.payNowText}>Pay Now</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
+                      {/* <LinearGradient
+                        colors={[theme.colors.primary, theme.colors.accent]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.payNowGradient}
+                      >
+                        <Text style={styles.payNowText}>Pay Now</Text>
+                      </LinearGradient> */}
+                    </TouchableOpacity>
+                  </View>
+                )}
                   {/* Owner actions for money donations */}
                   {user && donation.donorId === user.uid && (
                     <View style={{ flexDirection: 'row', marginTop: theme.spacing.md, gap: theme.spacing.sm }}>
-                      <TouchableOpacity
-                        style={[styles.payNowButton, { backgroundColor: theme.colors.primary }]}
-                        onPress={() => router.push({ pathname: '/donate/money', params: { editId: id } } as any)}
-                        activeOpacity={0.85}
-                      >
-                        <LinearGradient
-                          colors={[theme.colors.primary, theme.colors.accent]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.payNowGradient}
+                      {/* If not yet accepted by principal: show Edit + Delete */}
+                      {!(donation.status === 'accepted' || donation.acceptedBy) ? (
+                        <TouchableOpacity
+                          style={[styles.payNowButton, { backgroundColor: theme.colors.primary }]}
+                          onPress={() => router.push({ pathname: '/donate/money', params: { editId: id } } as any)}
+                          activeOpacity={0.85}
                         >
-                          <Text style={styles.payNowText}>Edit</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
+                          <LinearGradient
+                            colors={[theme.colors.primary, theme.colors.accent]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.payNowGradient}
+                          >
+                            <Text style={styles.payNowText}>Edit</Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      ) : (
+                        /* Accepted: show Pay Now instead of Edit */
+                        <TouchableOpacity
+                          style={[styles.payNowButton, { backgroundColor: theme.colors.primary }]}
+                          onPress={() => router.push({ pathname: '/pay-money/[id]', params: { id } })}
+                          activeOpacity={0.85}
+                        >
+                          <LinearGradient
+                            colors={[theme.colors.primary, theme.colors.accent]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.payNowGradient}
+                          >
+                            <Text style={styles.payNowText}>Pay Now</Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      )}
 
                       <TouchableOpacity
                         style={[styles.payNowButton, { backgroundColor: theme.colors.error }]}
