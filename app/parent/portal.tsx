@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +21,9 @@ import {
   MessageSquare,
   Star,
   LogOut,
-  ArrowLeft,
+  Home,
+  Calendar,
+  ThumbsUp,
 } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
 import { StudentProfile } from '@/types';
@@ -35,14 +38,20 @@ import {
   getTodayMealFromStock,
   getDonorIdByName,
   updateAllergiesAndFeedback,
+  getScheduledMeals,
+  getApprovedMealPlans,
+  getSchoolIdFromClass,
   TodayMealInfo,
   DonorInfo,
-  TodayMealStock
+  TodayMealStock,
+  ScheduledMealInfo,
+  ApprovedMealPlan
 } from '@/services/parent/parentDataService';
 import { submitDonorRating } from '@/services/parent/parentRatingService';
 
 export default function ParentPortalScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [teacherId, setTeacherId] = useState('');
   const [studentKey, setStudentKey] = useState('');
@@ -57,6 +66,9 @@ export default function ParentPortalScreen() {
   const [donorRating, setDonorRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [schoolId, setSchoolId] = useState('');
+  const [scheduledMeals, setScheduledMeals] = useState<ScheduledMealInfo[]>([]);
+  const [approvedPlans, setApprovedPlans] = useState<ApprovedMealPlan[]>([]);
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -64,6 +76,9 @@ export default function ParentPortalScreen() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
+      setDataLoadError(null);
+
       const session = await getParentSession();
       if (!session) {
         router.replace('/parent-login');
@@ -75,22 +90,63 @@ export default function ParentPortalScreen() {
       setStudentKey(session.studentKey);
       setAllergies(session.student.allergies || '');
       setMealFeedback(session.student.mealFeedbacks || '');
-      setSchoolId(session.teacherId);
+
+      let actualSchoolId = session.teacherId;
 
       if (session.student.classId && session.teacherId) {
-        const meal = await getTodayMealInfo(session.teacherId, session.student.studentId);
-        setTodayMeal(meal);
+        try {
+          actualSchoolId = await getSchoolIdFromClass(session.teacherId, session.student.classId);
+          setSchoolId(actualSchoolId);
+        } catch (err) {
+          console.error('Error getting school ID:', err);
+          actualSchoolId = session.teacherId;
+          setSchoolId(session.teacherId);
+        }
 
-        const mealStock = await getTodayMealFromStock(session.teacherId, session.student.classId);
-        setTodayMealStock(mealStock);
+        try {
+          const meal = await getTodayMealInfo(session.teacherId, session.student.studentId);
+          setTodayMeal(meal);
+        } catch (err) {
+          console.error('Error getting today meal:', err);
+        }
+
+        try {
+          const mealStock = await getTodayMealFromStock(actualSchoolId, session.student.classId);
+          setTodayMealStock(mealStock);
+        } catch (err) {
+          console.error('Error getting meal stock:', err);
+        }
+
+        try {
+          const scheduled = await getScheduledMeals(actualSchoolId, session.student.classId);
+          setScheduledMeals(scheduled);
+        } catch (err) {
+          console.error('Error getting scheduled meals:', err);
+          setScheduledMeals([]);
+        }
+
+        try {
+          const plans = await getApprovedMealPlans(actualSchoolId);
+          setApprovedPlans(plans);
+        } catch (err) {
+          console.error('Error getting approved plans:', err);
+          setApprovedPlans([]);
+        }
       }
 
       if (session.student.classId) {
-        const donor = await getTodayDonorInfo(session.student.classId);
-        setDonorInfo(donor);
+        try {
+          const donor = await getTodayDonorInfo(session.student.classId);
+          setDonorInfo(donor);
+        } catch (err) {
+          console.error('Error getting donor info:', err);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      setDataLoadError('Failed to load some data. Please try refreshing.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -180,7 +236,7 @@ export default function ParentPortalScreen() {
     router.replace('/parent-login');
   };
 
-  if (!student) {
+  if (loading || !student) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Loading...</Text>
@@ -189,483 +245,704 @@ export default function ParentPortalScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.push('/login')}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={24} color={theme.colors.primary} strokeWidth={2} />
-          <Text style={styles.backButtonText}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.7}
-        >
-          <LogOut size={22} color={theme.colors.error} strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
-
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
       <LinearGradient
-        colors={[theme.colors.primary, theme.colors.accent]}
+        colors={['#10B981', '#059669']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <Heart size={48} color={theme.colors.surface} strokeWidth={2} />
-        <Text style={styles.headerTitle}>Parent Portal</Text>
-        <Text style={styles.headerSubtitle}>Welcome, {student.parentName}</Text>
+        <View style={styles.headerContent}>
+          <Heart size={40} color="#FFFFFF" strokeWidth={2.5} />
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Hello, {student.parentName}!</Text>
+            <Text style={styles.headerSubtitle}>{student.name}'s Meal Info</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <LogOut size={24} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={styles.contentContainer}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <User size={24} color={theme.colors.primary} strokeWidth={2} />
-            <Text style={styles.cardTitle}>Student Information</Text>
+        <View style={styles.welcomeCard}>
+          <View style={styles.welcomeIconContainer}>
+            <User size={32} color="#10B981" strokeWidth={2.5} />
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Name:</Text>
-            <Text style={styles.infoValue}>{student.name}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Student ID:</Text>
-            <Text style={styles.infoValue}>{student.studentId}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Grade:</Text>
-            <Text style={styles.infoValue}>{student.grade}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Age:</Text>
-            <Text style={styles.infoValue}>{student.age} years</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Access Code:</Text>
+          <Text style={styles.welcomeTitle}>{student.name}</Text>
+          <Text style={styles.welcomeSubtitle}>Grade {student.grade} • Age {student.age}</Text>
+          <View style={styles.accessCodeBox}>
+            <Text style={styles.accessCodeLabel}>Your Access Code</Text>
             <Text style={styles.accessCode}>{student.parentAccessToken}</Text>
           </View>
         </View>
 
-        {todayMealStock && (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Utensils size={24} color={theme.colors.primary} strokeWidth={2} />
-              <Text style={styles.cardTitle}>Today's Meal in Class</Text>
+        {todayMealStock ? (
+          <View style={styles.bigCard}>
+            <View style={styles.bigCardHeader}>
+              <Utensils size={28} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={styles.bigCardTitle}>Today's Meal</Text>
             </View>
-            <View style={styles.mealInfoBox}>
-              <Text style={styles.mealName}>{todayMealStock.mealName}</Text>
-              <Text style={styles.donorNameSmall}>Donated by: {todayMealStock.donorName}</Text>
-              <View style={styles.mealMetaRow}>
-                <Text style={styles.mealMeta}>Quantity: {todayMealStock.quantity} {todayMealStock.unit}</Text>
-                <Text style={styles.mealMeta}>Coverage: {todayMealStock.coverage} students</Text>
-              </View>
+            <View style={styles.mealContent}>
+              <Text style={styles.bigMealName}>{todayMealStock.mealName}</Text>
               {todayMealStock.description && (
                 <Text style={styles.mealDescription}>{todayMealStock.description}</Text>
               )}
-              <View style={styles.ratingDisplay}>
-                <Star size={16} color="#F59E0B" fill="#F59E0B" strokeWidth={2} />
-                <Text style={styles.ratingText}>
-                  {todayMealStock.averageRating.toFixed(1)} ({todayMealStock.totalRatings} ratings)
-                </Text>
+              <View style={styles.mealInfoRow}>
+                <View style={styles.mealInfoItem}>
+                  <Text style={styles.mealInfoLabel}>Amount</Text>
+                  <Text style={styles.mealInfoValue}>{todayMealStock.quantity} {todayMealStock.unit}</Text>
+                </View>
+                <View style={styles.mealInfoItem}>
+                  <Text style={styles.mealInfoLabel}>For</Text>
+                  <Text style={styles.mealInfoValue}>{todayMealStock.coverage} Students</Text>
+                </View>
               </View>
-            </View>
 
-            <View style={styles.ratingSection}>
-              <Text style={styles.ratingSectionTitle}>Rate {todayMealStock.donorName}</Text>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity
-                    key={star}
-                    onPress={() => setDonorRating(star)}
-                    activeOpacity={0.7}
-                  >
-                    <Star
-                      size={32}
-                      color="#F59E0B"
-                      fill={star <= donorRating ? '#F59E0B' : 'transparent'}
-                      strokeWidth={2}
-                    />
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.donorBox}>
+                <Text style={styles.donorLabel}>Donated By</Text>
+                <Text style={styles.donorName}>{todayMealStock.donorName}</Text>
+                {todayMealStock.totalRatings > 0 && (
+                  <View style={styles.ratingDisplay}>
+                    <Star size={18} color="#F59E0B" fill="#F59E0B" strokeWidth={2} />
+                    <Text style={styles.ratingText}>
+                      {todayMealStock.averageRating.toFixed(1)} ({todayMealStock.totalRatings} ratings)
+                    </Text>
+                  </View>
+                )}
               </View>
-              <TextInput
-                style={styles.textArea}
-                placeholder="Add a comment (optional)"
-                placeholderTextColor={theme.colors.text.light}
-                value={ratingComment}
-                onChangeText={setRatingComment}
-                multiline
-                numberOfLines={3}
-              />
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={() => handleSubmitRating(todayMealStock.donorName, todayMealStock.donorId)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[theme.colors.primary, theme.colors.accent]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.submitButtonGradient}
+
+              <View style={styles.ratingSection}>
+                <Text style={styles.ratingSectionTitle}>How was the meal?</Text>
+                <Text style={styles.ratingSectionSubtitle}>Tap the stars to rate</Text>
+                <View style={styles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      onPress={() => setDonorRating(star)}
+                      activeOpacity={0.7}
+                      style={styles.starButton}
+                    >
+                      <Star
+                        size={42}
+                        color="#F59E0B"
+                        fill={star <= donorRating ? '#F59E0B' : 'transparent'}
+                        strokeWidth={2.5}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {donorRating > 0 && (
+                  <Text style={styles.ratingLabel}>
+                    {donorRating === 1 ? 'Poor' : donorRating === 2 ? 'Fair' : donorRating === 3 ? 'Good' : donorRating === 4 ? 'Very Good' : 'Excellent'}
+                  </Text>
+                )}
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Add your comment (optional)"
+                  placeholderTextColor="#9CA3AF"
+                  value={ratingComment}
+                  onChangeText={setRatingComment}
+                  multiline
+                  numberOfLines={3}
+                />
+                <TouchableOpacity
+                  style={styles.bigButton}
+                  onPress={() => handleSubmitRating(todayMealStock.donorName, todayMealStock.donorId)}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.submitButtonText}>Submit Rating</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.bigButtonGradient}
+                  >
+                    <ThumbsUp size={22} color="#FFFFFF" strokeWidth={2.5} />
+                    <Text style={styles.bigButtonText}>Submit Rating</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
+          </View>
+        ) : (
+          <View style={styles.emptyCard}>
+            <Utensils size={48} color="#D1D5DB" strokeWidth={2} />
+            <Text style={styles.emptyTitle}>No Meal Today</Text>
+            <Text style={styles.emptyText}>There is no meal scheduled for today</Text>
           </View>
         )}
 
         {todayMeal && (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Utensils size={24} color={theme.colors.primary} strokeWidth={2} />
-              <Text style={styles.cardTitle}>Meal Tracking</Text>
+          <View style={styles.statusCard}>
+            <View style={styles.statusHeader}>
+              <Home size={24} color="#10B981" strokeWidth={2.5} />
+              <Text style={styles.statusTitle}>Meal Status</Text>
             </View>
-            <View style={styles.mealStatusBox}>
-              <Text style={styles.mealStatus}>
-                {todayMeal.mealServed ? 'Meal Served ✓' : 'Not Served Yet'}
+            <View style={todayMeal.mealServed ? styles.statusServed : styles.statusPending}>
+              <Text style={styles.statusText}>
+                {todayMeal.mealServed ? '✓ Meal Served' : '⏳ Not Served Yet'}
               </Text>
               {todayMeal.time && (
-                <Text style={styles.mealTime}>Time: {todayMeal.time}</Text>
+                <Text style={styles.statusTime}>at {todayMeal.time}</Text>
               )}
             </View>
             {todayMeal.notes && (
               <View style={styles.notesBox}>
-                <Text style={styles.notesLabel}>Notes:</Text>
+                <Text style={styles.notesLabel}>Teacher's Note:</Text>
                 <Text style={styles.notesText}>{todayMeal.notes}</Text>
               </View>
             )}
           </View>
         )}
 
+        {(scheduledMeals.length > 0 || approvedPlans.length > 0) && (
+          <View style={styles.upcomingCard}>
+            <View style={styles.upcomingHeader}>
+              <Calendar size={24} color="#6366F1" strokeWidth={2.5} />
+              <Text style={styles.upcomingTitle}>Upcoming Meals</Text>
+            </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <AlertCircle size={24} color={theme.colors.primary} strokeWidth={2} />
-            <Text style={styles.cardTitle}>Allergy Information</Text>
+            {scheduledMeals.length > 0 ? (
+              scheduledMeals.slice(0, 3).map((meal, index) => (
+                <View key={index} style={styles.upcomingMealItem}>
+                  <View style={styles.upcomingDate}>
+                    <Text style={styles.upcomingDateText}>
+                      {new Date(meal.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                  <View style={styles.upcomingMealInfo}>
+                    <Text style={styles.upcomingMealName}>{meal.mealName}</Text>
+                    <Text style={styles.upcomingMealDonor}>by {meal.donorName}</Text>
+                  </View>
+                </View>
+              ))
+            ) : approvedPlans.length > 0 ? (
+              approvedPlans.slice(0, 3).map((plan, index) => (
+                <View key={index} style={styles.upcomingMealItem}>
+                  <View style={styles.upcomingDate}>
+                    <Text style={styles.upcomingDateText}>
+                      {new Date(plan.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                  <View style={styles.upcomingMealInfo}>
+                    <Text style={styles.upcomingMealName}>{plan.menu[0]?.mealName || 'Meal Plan'}</Text>
+                    <Text style={styles.upcomingMealDonor}>{plan.menu.length} item(s) planned</Text>
+                  </View>
+                </View>
+              ))
+            ) : null}
+          </View>
+        )}
+
+        <View style={styles.inputCard}>
+          <View style={styles.inputHeader}>
+            <AlertCircle size={24} color="#EF4444" strokeWidth={2.5} />
+            <Text style={styles.inputTitle}>Allergy Info</Text>
           </View>
           <TextInput
-            style={styles.textArea}
-            placeholder="Enter any allergies or dietary restrictions"
-            placeholderTextColor={theme.colors.text.light}
+            style={styles.bigInput}
+            placeholder="List any allergies or food restrictions"
+            placeholderTextColor="#9CA3AF"
             value={allergies}
             onChangeText={setAllergies}
             multiline
-            numberOfLines={4}
+            numberOfLines={3}
           />
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <MessageSquare size={24} color={theme.colors.primary} strokeWidth={2} />
-            <Text style={styles.cardTitle}>Meal Feedback</Text>
+        <View style={styles.inputCard}>
+          <View style={styles.inputHeader}>
+            <MessageSquare size={24} color="#3B82F6" strokeWidth={2.5} />
+            <Text style={styles.inputTitle}>Your Feedback</Text>
           </View>
           <TextInput
-            style={styles.textArea}
-            placeholder="Share your feedback about the meals"
-            placeholderTextColor={theme.colors.text.light}
+            style={styles.bigInput}
+            placeholder="Share your thoughts about the meals"
+            placeholderTextColor="#9CA3AF"
             value={mealFeedback}
             onChangeText={setMealFeedback}
             multiline
-            numberOfLines={4}
+            numberOfLines={3}
           />
         </View>
 
         <TouchableOpacity
-          style={styles.saveButton}
+          style={styles.bigButton}
           onPress={handleSaveInfo}
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={[theme.colors.primary, theme.colors.accent]}
+            colors={['#3B82F6', '#2563EB']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.saveButtonGradient}
+            style={styles.bigButtonGradient}
           >
-            <Text style={styles.saveButtonText}>Save Information</Text>
+            <Text style={styles.bigButtonText}>Save Information</Text>
           </LinearGradient>
         </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#F3F4F6',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#F3F4F6',
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    paddingTop: 50,
-    paddingBottom: 12,
-    paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    ...theme.shadows.sm,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: theme.colors.primary,
-  },
-  logoutButton: {
-    padding: theme.spacing.xs,
+    color: '#6B7280',
   },
   header: {
     paddingTop: 60,
-    paddingBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.surface,
-    marginTop: theme.spacing.md,
+    color: '#FFFFFF',
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.surface,
+    color: '#FFFFFF',
     opacity: 0.9,
-    marginTop: theme.spacing.xs,
+    marginTop: 2,
+  },
+  logoutButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
-    padding: theme.spacing.md,
   },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.md,
+  contentContainer: {
+    padding: 16,
   },
-  cardHeader: {
-    flexDirection: 'row',
+  welcomeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 16,
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  welcomeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#D1FAE5',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  infoLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: theme.colors.text.primary,
-  },
-  accessCode: {
-    fontSize: 18,
+  welcomeTitle: {
+    fontSize: 24,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.primary,
-    letterSpacing: 4,
-  },
-  mealInfoBox: {
-    backgroundColor: `${theme.colors.primary}05`,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  mealName: {
-    fontSize: 20,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
-    marginBottom: 6,
-  },
-  donorNameSmall: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  mealMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.xs,
-  },
-  mealMeta: {
-    fontSize: 13,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-  },
-  mealDescription: {
-    fontSize: 13,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-  },
-  mealStatusBox: {
-    backgroundColor: `${theme.colors.primary}10`,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  mealStatus: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.primary,
+    color: '#111827',
     marginBottom: 4,
   },
-  mealTime: {
+  welcomeSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  accessCodeBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  accessCodeLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  accessCode: {
+    fontSize: 22,
+    fontFamily: 'Inter-Bold',
+    color: '#10B981',
+    letterSpacing: 6,
+  },
+  bigCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  bigCardHeader: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bigCardTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+  },
+  mealContent: {
+    padding: 20,
+  },
+  bigMealName: {
+    fontSize: 26,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  mealDescription: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  mealInfoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  mealInfoItem: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  mealInfoLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  mealInfoValue: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+  },
+  donorBox: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  donorLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#6366F1',
+    marginBottom: 4,
+  },
+  donorName: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: '#4338CA',
+    marginBottom: 8,
+  },
+  statusCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  statusTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+  },
+  statusServed: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusPending: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusText: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+  },
+  statusTime: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
+    color: '#6B7280',
+    marginTop: 4,
   },
   notesBox: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 12,
   },
   notesLabel: {
     fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: theme.colors.text.secondary,
-    marginBottom: 4,
+    color: '#6B7280',
+    marginBottom: 6,
   },
   notesText: {
-    fontSize: 13,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.primary,
-  },
-  donorInfoBox: {
-    backgroundColor: `${theme.colors.primary}05`,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  donorName: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  donorItem: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: theme.colors.primary,
-    marginBottom: 2,
-  },
-  donorQuantity: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-  },
-  donorDescription: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
+    color: '#374151',
+    lineHeight: 20,
   },
   ratingDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: 6,
   },
   ratingText: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
-    color: theme.colors.text.primary,
+    color: '#374151',
   },
   ratingSection: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: theme.spacing.md,
+    borderTopWidth: 2,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 20,
   },
   ratingSectionTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
+    color: '#111827',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  ratingSectionSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   starsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  textArea: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.primary,
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: theme.spacing.md,
-  },
-  submitButton: {
-    borderRadius: theme.borderRadius.md,
-    overflow: 'hidden',
-    ...theme.shadows.sm,
-  },
-  submitButtonGradient: {
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    marginBottom: 12,
   },
-  submitButtonText: {
+  starButton: {
+    padding: 4,
+  },
+  ratingLabel: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: theme.colors.surface,
+    fontFamily: 'Inter-SemiBold',
+    color: '#10B981',
+    textAlign: 'center',
+    marginBottom: 16,
   },
-  saveButton: {
-    borderRadius: theme.borderRadius.lg,
+  commentInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#111827',
+    minHeight: 90,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  bigButton: {
+    borderRadius: 16,
     overflow: 'hidden',
-    ...theme.shadows.md,
-    marginTop: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  saveButtonGradient: {
-    paddingVertical: theme.spacing.md,
+  bigButtonGradient: {
+    paddingVertical: 18,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
   },
-  saveButtonText: {
+  bigButtonText: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.surface,
+    color: '#FFFFFF',
+  },
+  upcomingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  upcomingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  upcomingTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+  },
+  upcomingMealItem: {
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    alignItems: 'center',
+    gap: 12,
+  },
+  upcomingDate: {
+    backgroundColor: '#6366F1',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  upcomingDateText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+  },
+  upcomingMealInfo: {
+    flex: 1,
+  },
+  upcomingMealName: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  upcomingMealDonor: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+  },
+  inputCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  inputHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  inputTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+  },
+  bigInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#111827',
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 40,
+    marginBottom: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: '#6B7280',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });

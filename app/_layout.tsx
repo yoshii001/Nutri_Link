@@ -33,9 +33,12 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="parent-login" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="parent/index" />
+        <Stack.Screen name="parent/portal" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

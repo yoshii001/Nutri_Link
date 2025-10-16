@@ -49,9 +49,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await firebaseSignOut();
-    setUser(null);
-    setUserData(null);
+    try {
+      await firebaseSignOut();
+    } catch (err) {
+      console.warn('firebaseSignOut failed:', err);
+      // continue to clear local state even if remote sign-out failed
+    }
+    // Defer clearing local state to next tick to avoid synchronous re-renders
+    setTimeout(() => {
+      setUser(null);
+      setUserData(null);
+    }, 0);
   };
 
   return (

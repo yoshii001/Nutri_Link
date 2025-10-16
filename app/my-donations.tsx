@@ -23,10 +23,10 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getDonationsByDonorId } from '@/services/firebase/donationService';
 import { getPublishedDonationsByDonorId } from '@/services/firebase/publishedDonationService';
-import { getActiveDonationRequests } from '@/services/firebase/donationRequestService';
 import mockPaymentService from '@/services/mockPaymentService';
 import { Donation, PublishedDonation } from '@/types';
 import { theme } from '@/constants/theme';
+import DonorBadge from '@/components/DonorBadge';
 
 export default function MyDonationsScreen() {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function MyDonationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'monetary' | 'published'>('monetary');
   const [mockPayments, setMockPayments] = useState<any[]>([]);
-  const [activeRequestsCount, setActiveRequestsCount] = useState(0);
+  
 
   const loadData = async () => {
     if (!user) return;
@@ -50,18 +50,6 @@ export default function MyDonationsScreen() {
       ]);
       setDonations(donationsData);
       setPublishedDonations(publishedData);
-      // load active donation requests and compute unique schools count
-      try {
-        const activeRequests = await getActiveDonationRequests();
-        const uniqueSchools = new Set<string>();
-        Object.values(activeRequests).forEach((req: any) => {
-          if (req.schoolId) uniqueSchools.add(req.schoolId);
-        });
-        setActiveRequestsCount(uniqueSchools.size);
-      } catch (err) {
-        console.warn('Failed to load active donation requests', err);
-        setActiveRequestsCount(0);
-      }
         try {
           const payments = await mockPaymentService.getAllMockPayments();
           setMockPayments(payments.filter((p: any) => p.donorId === user.uid));
@@ -93,8 +81,8 @@ export default function MyDonationsScreen() {
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.push('/(tabs)/dashboard')}
           activeOpacity={0.7}
+          onPress={() => router.push('/(tabs)/dashboard')}
         >
           <ArrowLeft size={24} color={theme.colors.primary} strokeWidth={2} />
           <Text style={styles.backButtonText}>Dashboard</Text>
@@ -112,29 +100,38 @@ export default function MyDonationsScreen() {
         <Text style={styles.headerSubtitle}>Your impact on children's lives</Text>
       </LinearGradient>
 
+      {/* Donor badge placed above the stats card to avoid overlapping tabs/content */}
+      <View style={{ marginHorizontal: theme.spacing.md, marginTop: -theme.spacing.lg + 24, paddingBottom: 18 }}>
+        <View style={{ backgroundColor: 'transparent', borderRadius: theme.borderRadius.md, overflow: 'hidden' }}>
+          <DonorBadge totalDonated={totalDonated} />
+        </View>
+      </View>
+      {/* spacer to ensure clear separation between badge and stats card */}
+      <View style={{ height: 8 }} />
+
       <View style={styles.statsCard}>
         <View style={styles.statItem}>
-          <DollarSign size={28} color={theme.colors.success} strokeWidth={2} />
-          <Text style={styles.statValue}>${totalDonated.toFixed(2)}</Text>
+          <View style={styles.statIcon}>
+            <DollarSign size={28} color={theme.colors.success} strokeWidth={2} />
+          </View>
+          <Text style={styles.statValueSmall}>Rs.{totalDonated}</Text>
           <Text style={styles.statLabel}>Total Donated</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Heart size={28} color={theme.colors.error} strokeWidth={2} />
+          <View style={styles.statIcon}>
+            <Heart size={28} color={theme.colors.error} strokeWidth={2} />
+          </View>
           <Text style={styles.statValue}>{totalMeals}</Text>
           <Text style={styles.statLabel}>Meals Funded</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Package size={28} color={theme.colors.primary} strokeWidth={2} />
+          <View style={styles.statIcon}>
+            <Package size={28} color={theme.colors.primary} strokeWidth={2} />
+          </View>
           <Text style={styles.statValue}>{totalPublished}</Text>
           <Text style={styles.statLabel}>Items Published</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Settings size={28} color={theme.colors.primary} strokeWidth={2} />
-          <Text style={styles.statValue}>{activeRequestsCount}</Text>
-          <Text style={styles.statLabel}>Active Requests</Text>
         </View>
       </View>
 
@@ -202,7 +199,7 @@ export default function MyDonationsScreen() {
                     </View>
 
                     <View style={styles.amountContainer}>
-                      <Text style={styles.amount}>${donation.amount.toFixed(2)}</Text>
+                        <Text style={styles.amount}>Rs.{donation.amount.toFixed(2)}</Text>
                       <View style={styles.mealsBadge}>
                         <Heart size={14} color={theme.colors.error} />
                         <Text style={styles.mealsText}>{donation.mealContribution} meals</Text>
@@ -360,8 +357,8 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: theme.spacing.xl,
+    paddingTop: 20,
+    paddingBottom: theme.spacing.lg,
     paddingHorizontal: theme.spacing.xl,
     alignItems: 'center',
   },
@@ -381,24 +378,39 @@ const styles = StyleSheet.create({
   statsCard: {
     backgroundColor: theme.colors.surface,
     marginHorizontal: theme.spacing.md,
-    marginTop: -theme.spacing.lg,
+    marginTop: -theme.spacing.xl,
     borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
     flexDirection: 'row',
-    flexWrap: 'wrap',
     ...theme.shadows.lg,
   },
   statItem: {
-    width: '50%',
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${theme.colors.background}22`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
   },
   statDivider: {
     width: 1,
     backgroundColor: theme.colors.border,
+    marginHorizontal: theme.spacing.md,
+    alignSelf: 'stretch',
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.xs,
+  },
+  statValueSmall: {
+    fontSize: 15,
     fontFamily: 'Inter-Bold',
     color: theme.colors.text.primary,
     marginTop: theme.spacing.xs,

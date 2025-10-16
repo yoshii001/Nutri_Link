@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, DollarSign } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMoneyDonationById } from '@/services/firebase/moneyDonationService';
+import { getMoneyDonationById, deleteMoneyDonation } from '@/services/firebase/moneyDonationService';
 import { processDonationPayment, createPaymentIntent } from '@/services/stripeService';
 import mockPaymentService from '@/services/mockPaymentService';
 import { CardField, useStripe } from '@/services/stripeClient';
@@ -80,6 +80,11 @@ export default function PayMoneyScreen() {
           } as any;
           const donationRecordId = await processDonationPayment(paymentData);
           await mockPaymentService.savePaymentRecord({ donationId: id, donorId: user.uid, amount: donation.amount, status: 'succeeded', details: { simulated: true, donationRecordId } });
+            try {
+              await deleteMoneyDonation(id);
+            } catch (err) {
+              console.warn('Failed to delete money donation after simulated payment', err);
+            }
           // Show success popup then navigate to My Donations
           Alert.alert('Payment successful', 'Your payment was recorded.', [{ text: 'OK', onPress: () => router.push('/my-donations') }]);
         } catch (err) {
@@ -128,6 +133,11 @@ export default function PayMoneyScreen() {
               } as any;
               const donationRecordId = await processDonationPayment(paymentData);
               await mockPaymentService.savePaymentRecord({ donationId: id, donorId: user.uid, amount: donation.amount, status: 'succeeded', details: { simulated: true, donationRecordId } });
+              try {
+                await deleteMoneyDonation(id);
+              } catch (err) {
+                console.warn('Failed to delete money donation after simulated checkout fallback', err);
+              }
             } catch (err) {
               console.error('Simulation error', err);
             }
@@ -171,9 +181,13 @@ export default function PayMoneyScreen() {
       } as any;
 
       const donationRecordId = await processDonationPayment(paymentData);
-
-  await mockPaymentService.savePaymentRecord({ donationId: id, donorId: user.uid, amount: donation.amount, status: 'succeeded', details: { donationRecordId, paymentIntentId: paymentIntent?.id } });
-  Alert.alert('Payment successful', 'Your payment was completed successfully.', [{ text: 'OK', onPress: () => router.push('/my-donations') }]);
+      await mockPaymentService.savePaymentRecord({ donationId: id, donorId: user.uid, amount: donation.amount, status: 'succeeded', details: { donationRecordId, paymentIntentId: paymentIntent?.id } });
+      try {
+        await deleteMoneyDonation(id);
+      } catch (err) {
+        console.warn('Failed to delete money donation after confirmed payment', err);
+      }
+      Alert.alert('Payment successful', 'Your payment was completed successfully.', [{ text: 'OK', onPress: () => router.push('/my-donations') }]);
     } catch (err: any) {
       console.error('Payment error', err);
       await mockPaymentService.savePaymentRecord({ donationId: id, donorId: user?.uid, amount: donation.amount || 0, status: 'failed', details: { error: err?.message || String(err) } });
