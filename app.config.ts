@@ -10,15 +10,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: config.name ?? 'NutriLink',
     slug: (config.slug as string) ?? 'nutrilink',
+    // IMPORTANT: merge existing extra (from app.json) so we don't drop values like extra.eas.projectId
     extra: {
-      // non-public secrets (do not prefix with EXPO_PUBLIC_) can go here if
-      // you want them injected via eas secrets or CI, but avoid checking them in.
+      ...(config.extra as any),
+      eas: {
+        // Ensure EAS project id is available for eas build/linking
+        projectId:
+          (config as any)?.extra?.eas?.projectId ?? 'ab335c42-eca5-4775-a437-7d261d898d60',
+      },
     },
-    // Expose the Firebase config as public runtime env vars for the app.
-    // Use EXPO_PUBLIC_* prefix so Expo will include them in the JS bundle.
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
+    // In bare workflow, runtimeVersion must be a static string (policy not supported)
+    runtimeVersion: config.version ?? '1.0.0',
     owner: config.owner,
   } as ExpoConfig;
 

@@ -6,17 +6,30 @@
     "orientation": "portrait",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+  "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
+    },
+    "android": {
+      "package": "com.jordancj7.nutrilink"
     },
     "web": {
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router", "expo-font", "expo-web-browser"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser"
+    ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ab335c42-eca5-4775-a437-7d261d898d60"
+      },
+      "router": {}
     }
   }
 }
