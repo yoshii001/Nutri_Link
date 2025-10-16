@@ -34,16 +34,16 @@ export default function PublishDonationScreen() {
 
           <View style={{ flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.md }}>
             <TouchableOpacity
-              style={{ padding: 8, backgroundColor: theme.colors.surface, borderRadius: 8 }}
+              style={{ padding: 20, backgroundColor: theme.colors.surface, borderRadius: 8 }}
               onPress={() => router.push('/donor/food')}
             >
-              <Text style={{ fontFamily: 'Inter-SemiBold', color: theme.colors.primary }}>Food Donation</Text>
+              <Text style={{ fontFamily: 'Inter-SemiBold', color: theme.colors.primary, fontSize: 16 }}>Food Donation</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={{ padding: 8, backgroundColor: theme.colors.surface, borderRadius: 8 }}
+              style={{ padding: 20, backgroundColor: theme.colors.surface, borderRadius: 8 }}
               onPress={() => router.push('/donor/money')}
             >
-              <Text style={{ fontFamily: 'Inter-SemiBold', color: theme.colors.primary }}>Money Donation</Text>
+              <Text style={{ fontFamily: 'Inter-SemiBold', color: theme.colors.primary, fontSize: 16 }}>Money Donation</Text>
             </TouchableOpacity>
           </View>
         </LinearGradient>

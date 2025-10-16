@@ -87,7 +87,7 @@ export default function ViewRequestsScreen() {
     if (amount > remainingAmount) {
       Alert.alert(
         'Error',
-        `The donation amount cannot exceed the remaining amount of $${remainingAmount.toFixed(2)}`
+        `The donation amount cannot exceed the remaining amount of Rs. ${remainingAmount.toFixed(2)}`
       );
       return;
     }
@@ -115,7 +115,7 @@ export default function ViewRequestsScreen() {
 
       Alert.alert(
         'Success',
-        `Thank you for your donation of $${amount.toFixed(2)}!`,
+        `Thank you for your donation of Rs. ${amount.toFixed(2)}!`,
         [
           {
             text: 'OK',
@@ -274,19 +274,19 @@ export default function ViewRequestsScreen() {
                     <View style={styles.amountRow}>
                       <Text style={styles.amountLabel}>Requested:</Text>
                       <Text style={styles.amountValue}>
-                        ${request.requestedAmount.toFixed(2)}
+                        Rs. {request.requestedAmount.toFixed(2)}
                       </Text>
                     </View>
                     <View style={styles.amountRow}>
                       <Text style={styles.amountLabel}>Fulfilled:</Text>
                       <Text style={styles.amountFulfilled}>
-                        ${request.fulfilledAmount.toFixed(2)}
+                        Rs. {request.fulfilledAmount.toFixed(2)}
                       </Text>
                     </View>
                     <View style={styles.amountRow}>
                       <Text style={styles.amountLabel}>Remaining:</Text>
                       <Text style={styles.amountRemaining}>
-                        ${remainingAmount.toFixed(2)}
+                        Rs. {remainingAmount.toFixed(2)}
                       </Text>
                     </View>
                   </View>
@@ -358,13 +358,13 @@ export default function ViewRequestsScreen() {
                   <Text style={styles.requestPurpose}>{selectedRequest.request.purpose}</Text>
                   <View style={styles.requestAmounts}>
                     <Text style={styles.requestAmountLabel}>
-                      Remaining: ${getRemainingAmount(selectedRequest.request).toFixed(2)}
+                      Remaining: Rs. {getRemainingAmount(selectedRequest.request).toFixed(2)}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Donation Amount ($)</Text>
+                  <Text style={styles.inputLabel}>Donation Amount (Rs.)</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="0.00"

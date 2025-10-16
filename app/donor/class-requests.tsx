@@ -134,7 +134,7 @@ export default function ClassRequestsScreen() {
                     <View style={styles.detailItem}>
                       <DollarSign color={theme.colors.text.secondary} size={16} />
                       <Text style={styles.detailText}>
-                        ${request.requestedAmount.toFixed(2)}
+                        Rs. {request.requestedAmount.toFixed(2)}
                       </Text>
                     </View>
                   )}
@@ -209,7 +209,7 @@ export default function ClassRequestsScreen() {
                     <View style={styles.detailItem}>
                       <DollarSign color={theme.colors.text.secondary} size={16} />
                       <Text style={styles.detailText}>
-                        ${request.requestedAmount.toFixed(2)}
+                        Rs. {request.requestedAmount.toFixed(2)}
                       </Text>
                     </View>
                   )}
@@ -267,7 +267,7 @@ export default function ClassRequestsScreen() {
                   <View style={styles.detailSection}>
                     <Text style={styles.detailLabel}>Requested Amount</Text>
                     <Text style={styles.detailValue}>
-                      ${selectedRequest.request.requestedAmount.toFixed(2)}
+                      Rs. {selectedRequest.request.requestedAmount.toFixed(2)}
                     </Text>
                   </View>
                 )}

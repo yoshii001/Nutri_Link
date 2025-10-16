@@ -128,7 +128,7 @@ export default function MoneyDonationScreen() {
 
         <View style={styles.content}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount (USD) *</Text>
+            <Text style={styles.label}>Amount (Rs) *</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"
