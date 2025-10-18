@@ -24,6 +24,12 @@ export default function DashboardScreen() {
   const [recentMocks, setRecentMocks] = useState<MockPaymentRecord[]>([]);
   const [donorMetrics, setDonorMetrics] = useState({ total: 0, count: 0, meals: 0, last: null as { amount: number; date: string } | null });
 
+  // Redirect to login if user is not authenticated
+  if (!user || !userData) {
+    console.log('[Dashboard] User not authenticated, redirecting to login');
+    return <Redirect href="/login" />;
+  }
+
   if (userData?.role === 'principal') {
     return <Redirect href="/principal/dashboard" />;
   }

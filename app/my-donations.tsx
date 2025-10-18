@@ -1,5 +1,5 @@
 // app/my-donations.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Heart,
@@ -48,6 +48,8 @@ export default function MyDonationsScreen() {
         getDonationsByDonorId(user.uid),
         getPublishedDonationsByDonorId(user.uid),
       ]);
+      console.log('[MyDonations] Loaded published donations:', publishedData);
+      console.log('[MyDonations] Published donations count:', Object.keys(publishedData).length);
       setDonations(donationsData);
       setPublishedDonations(publishedData);
         try {
@@ -64,6 +66,14 @@ export default function MyDonationsScreen() {
   useEffect(() => {
     loadData();
   }, [user]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[MyDonations] Screen focused, refreshing data');
+      loadData();
+    }, [user])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

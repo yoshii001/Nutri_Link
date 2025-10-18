@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { theme } from '@/constants/theme';
 import { Users, UtensilsCrossed, ClipboardCheck, BarChart, Package } from 'lucide-react-native';
@@ -16,6 +16,18 @@ export default function TeacherDashboard() {
   const [mealStockCount, setMealStockCount] = useState(0);
   const [totalCoverage, setTotalCoverage] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Redirect to login if user is not authenticated
+  if (!user || !userData) {
+    console.log('[TeacherDashboard] User not authenticated, redirecting to login');
+    return <Redirect href="/login" />;
+  }
+
+  // Redirect to main dashboard if user is not a teacher
+  if (userData.role !== 'teacher') {
+    console.log('[TeacherDashboard] User is not a teacher, redirecting to dashboard');
+    return <Redirect href="/(tabs)/dashboard" />;
+  }
 
   useEffect(() => {
     loadMealStock();

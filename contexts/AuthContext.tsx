@@ -50,16 +50,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      console.log('[AuthContext] Starting signOut...');
       await firebaseSignOut();
+      console.log('[AuthContext] Firebase signOut completed');
     } catch (err) {
-      console.warn('firebaseSignOut failed:', err);
+      console.warn('[AuthContext] firebaseSignOut failed:', err);
       // continue to clear local state even if remote sign-out failed
     }
-    // Defer clearing local state to next tick to avoid synchronous re-renders
-    setTimeout(() => {
-      setUser(null);
-      setUserData(null);
-    }, 0);
+    // Clear local state immediately and synchronously to ensure UI updates
+    console.log('[AuthContext] Clearing local state');
+    setUser(null);
+    setUserData(null);
+    console.log('[AuthContext] Local state cleared');
   };
 
   return (

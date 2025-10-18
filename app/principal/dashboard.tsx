@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSchoolByPrincipalId } from '@/services/firebase/schoolService';
 import { getTeachersBySchoolId } from '@/services/firebase/teacherService';
@@ -39,6 +39,18 @@ export default function PrincipalDashboardScreen() {
   });
   const [refreshing, setRefreshing] = useState(false);
   const [hasSchool, setHasSchool] = useState(false);
+
+  // Redirect to login if user is not authenticated
+  if (!user || !userData) {
+    console.log('[PrincipalDashboard] User not authenticated, redirecting to login');
+    return <Redirect href="/login" />;
+  }
+
+  // Redirect to dashboard if user is not principal
+  if (userData.role !== 'principal') {
+    console.log('[PrincipalDashboard] User is not a principal, redirecting to dashboard');
+    return <Redirect href="/(tabs)/dashboard" />;
+  }
 
   useEffect(() => {
     loadData();

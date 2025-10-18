@@ -57,14 +57,19 @@ export const getAllPublishedDonations = async (): Promise<Record<string, Publish
 
 export const getPublishedDonationsByDonorId = async (donorId: string): Promise<Record<string, PublishedDonation>> => {
   const donations = await getAllPublishedDonations();
+  console.log('[publishedDonationService] All published donations:', donations);
+  console.log('[publishedDonationService] Looking for donorId:', donorId);
+  
   const donorDonations: Record<string, PublishedDonation> = {};
 
   Object.entries(donations).forEach(([id, donation]) => {
+    console.log(`[publishedDonationService] Checking donation ${id}:`, donation, 'donorId match?', donation.donorId === donorId);
     if (donation.donorId === donorId) {
       donorDonations[id] = donation;
     }
   });
 
+  console.log('[publishedDonationService] Filtered donor donations:', donorDonations);
   return donorDonations;
 };
 
