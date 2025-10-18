@@ -24,13 +24,23 @@ import {
 } from '@/services/firebase/mealStockService';
 import { StudentProfile } from '@/types';
 import { theme } from '@/constants/theme';
-import { CheckCircle, Circle, User, Package, X } from 'lucide-react-native';
+import { CheckCircle, Circle, User, Package, X, Search, AlertTriangle } from 'lucide-react-native';
 import TeacherHeader from '@/components/TeacherHeader';
 import TeacherBottomNav from '@/components/TeacherBottomNav';
 
 interface StudentWithServed extends StudentProfile {
   mealServedToday?: boolean;
 }
+
+// Modern color palette
+const COLORS = {
+  ocean: '#0891B2',
+  mint: '#10B981',
+  coral: '#F43F5E',
+  amber: '#F59E0B',
+  slate: '#64748B',
+  neutral: '#F8FAFC',
+};
 
 export default function ServeMealsScreen() {
   const { user } = useAuth();
@@ -159,47 +169,122 @@ export default function ServeMealsScreen() {
 
   const servedCount = Object.values(students).filter((s) => s.mealServedToday).length;
   const totalCount = Object.keys(students).length;
+  const progressPercentage = totalCount > 0 ? (servedCount / totalCount) * 100 : 0;
 
   return (
     <View style={styles.container}>
       <TeacherHeader
         title="Serve Meals"
-        subtitle={`${servedCount} / ${totalCount} served`}
+        subtitle="Track daily meal distribution"
       />
 
+
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search students..."
-          placeholderTextColor="#999"
-          value={query}
-          onChangeText={setQuery}
-        />
+        <View style={styles.searchInputWrapper}>
+          <Search size={20} color={COLORS.slate} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name or ID..."
+            placeholderTextColor="#94A3B8"
+            value={query}
+            onChangeText={setQuery}
+          />
+        </View>
       </View>
 
+      {/* Progress Card */}
+      <View style={styles.progressCard}>
+        <View style={styles.progressHeader}>
+          <View>
+            <Text style={styles.progressTitle}>Today's Progress</Text>
+            <Text style={styles.progressSubtitle}>
+              {servedCount} of {totalCount} students
+            </Text>
+          </View>
+          <View style={styles.progressBadge}>
+            <Text style={styles.progressPercent}>{Math.round(progressPercentage)}%</Text>
+          </View>
+        </View>
+        
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <View style={[styles.statIcon, { backgroundColor: COLORS.mint + '15' }]}>
+              <CheckCircle size={18} color={COLORS.mint} strokeWidth={2.5} />
+            </View>
+            <Text style={styles.statValue}>{servedCount}</Text>
+            <Text style={styles.statLabel}>Served</Text>
+          </View>
+          
+          <View style={styles.statDivider} />
+          
+          <View style={styles.statItem}>
+            <View style={[styles.statIcon, { backgroundColor: COLORS.slate + '15' }]}>
+              <Circle size={18} color={COLORS.slate} strokeWidth={2.5} />
+            </View>
+            <Text style={styles.statValue}>{totalCount - servedCount}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
+          </View>
+        </View>
+      </View>
+
+      
+
+      {/* Student List */}
       <FlatList
         data={filtered}
         keyExtractor={([id]) => id}
         renderItem={({ item: [id, s] }) => (
           <TouchableOpacity
             style={[
-              styles.studentRow,
-              s.mealServedToday && styles.studentRowServed,
+              styles.studentCard,
+              s.mealServedToday && styles.studentCardServed,
             ]}
             onPress={() => handleServeMeal(id, s)}
+            activeOpacity={0.7}
           >
-            <View style={styles.studentInfo}>
-              <Text style={styles.studentName}>{s.name}</Text>
-              <Text style={styles.studentDetail}>ID: {s.studentId}</Text>
-              {s.allergies && (
-                <Text style={styles.allergiesText}>Allergies: {s.allergies}</Text>
-              )}
+            <View style={styles.studentCardContent}>
+              <View style={[
+                styles.studentAvatar,
+                s.mealServedToday && { backgroundColor: COLORS.mint + '15' }
+              ]}>
+                <User 
+                  size={24} 
+                  color={s.mealServedToday ? COLORS.mint : COLORS.slate} 
+                  strokeWidth={2.5}
+                />
+              </View>
+              
+              <View style={styles.studentInfo}>
+                <Text style={styles.studentName}>{s.name}</Text>
+                <Text style={styles.studentId}>ID: {s.studentId}</Text>
+                {s.allergies && (
+                  <View style={styles.allergyBadge}>
+                    <AlertTriangle size={12} color={COLORS.coral} />
+                    <Text style={styles.allergyText}>{s.allergies}</Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <View style={styles.checkIcon}>
+
+            <View style={[
+              styles.statusIndicator,
+              s.mealServedToday && styles.statusIndicatorServed
+            ]}>
               {s.mealServedToday ? (
-                <CheckCircle color={theme.colors.primary} size={32} />
+                <>
+                  <CheckCircle size={24} color={COLORS.mint} strokeWidth={2.5} />
+                  <Text style={styles.statusTextServed}>Served</Text>
+                </>
               ) : (
-                <Circle color="#ccc" size={32} />
+                <>
+                  <Circle size={24} color={COLORS.slate} strokeWidth={2.5} />
+                  <Text style={styles.statusTextPending}>Pending</Text>
+                </>
               )}
             </View>
           </TouchableOpacity>
@@ -207,67 +292,92 @@ export default function ServeMealsScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <User color="#ccc" size={64} />
-            <Text style={styles.emptyText}>
+            <View style={styles.emptyIcon}>
+              <User color={COLORS.slate} size={48} strokeWidth={1.5} />
+            </View>
+            <Text style={styles.emptyTitle}>
               {query ? 'No students found' : 'No students yet'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {query ? 'Try a different search term' : 'Add students to get started'}
             </Text>
           </View>
         }
       />
 
-      <Modal visible={showMealSelector} transparent animationType="fade">
+      {/* Meal Selection Modal */}
+      <Modal visible={showMealSelector} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Meal</Text>
+              <View>
+                <Text style={styles.modalTitle}>Select Meal</Text>
+                {selectedStudent && (
+                  <Text style={styles.modalSubtitle}>
+                    For: {selectedStudent.student.name}
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity
+                style={styles.closeButton}
                 onPress={() => {
                   setShowMealSelector(false);
                   setSelectedStudent(null);
                 }}
               >
-                <X size={24} color={theme.colors.text.primary} />
+                <X size={24} color={COLORS.slate} strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
 
-            {selectedStudent && (
-              <Text style={styles.modalSubtitle}>
-                Serving to: {selectedStudent.student.name}
-              </Text>
-            )}
-
-            <ScrollView style={styles.mealList}>
+            <ScrollView style={styles.mealList} showsVerticalScrollIndicator={false}>
               {Object.entries(mealStock).map(([id, meal]) => (
                 <TouchableOpacity
                   key={id}
-                  style={styles.mealOption}
+                  style={[
+                    styles.mealCard,
+                    meal.coverage <= 0 && styles.mealCardDisabled
+                  ]}
                   onPress={() => serveMealWithStock(id, meal.mealName)}
                   disabled={meal.coverage <= 0}
+                  activeOpacity={0.7}
                 >
-                  <Package
-                    size={20}
-                    color={meal.coverage > 0 ? theme.colors.primary : '#ccc'}
-                  />
-                  <View style={styles.mealOptionContent}>
-                    <Text
-                      style={[
-                        styles.mealOptionName,
-                        meal.coverage <= 0 && styles.mealOptionNameDisabled,
-                      ]}
-                    >
+                  <View style={[
+                    styles.mealIcon,
+                    { backgroundColor: meal.coverage > 0 ? COLORS.ocean + '15' : '#F1F5F9' }
+                  ]}>
+                    <Package
+                      size={22}
+                      color={meal.coverage > 0 ? COLORS.ocean : COLORS.slate}
+                      strokeWidth={2.5}
+                    />
+                  </View>
+                  
+                  <View style={styles.mealInfo}>
+                    <Text style={[
+                      styles.mealName,
+                      meal.coverage <= 0 && styles.mealNameDisabled
+                    ]}>
                       {meal.mealName}
                     </Text>
-                    <Text style={styles.mealOptionDetails}>
-                      Can serve {meal.coverage} more students
+                    <Text style={[
+                      styles.mealCoverage,
+                      meal.coverage <= 0 && styles.mealCoverageDisabled
+                    ]}>
+                      Can serve {meal.coverage} more
                     </Text>
-                    <Text style={styles.mealOptionQuantity}>
+                    <Text style={styles.mealQuantity}>
                       {meal.quantity} {meal.unit} available
                     </Text>
                   </View>
+
                   {meal.coverage > 0 ? (
-                    <CheckCircle size={20} color={theme.colors.primary} />
+                    <View style={styles.mealSelectIcon}>
+                      <CheckCircle size={20} color={COLORS.ocean} strokeWidth={2.5} />
+                    </View>
                   ) : (
-                    <Text style={styles.outOfStockText}>Out of Stock</Text>
+                    <View style={styles.outOfStockBadge}>
+                      <Text style={styles.outOfStockText}>Out</Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               ))}
@@ -284,37 +394,154 @@ export default function ServeMealsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#F8FAFC',
   },
-  searchContainer: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: COLORS.ocean,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  searchInput: {
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    color: theme.colors.text.primary,
-  },
-  listContent: {
-    padding: theme.spacing.md,
-  },
-  studentRow: {
+  progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  studentRowServed: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + '10',
+  progressTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  progressSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Inter-Medium',
+    color: COLORS.slate,
+  },
+  progressBadge: {
+    backgroundColor: COLORS.ocean + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  progressPercent: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: COLORS.ocean,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.ocean,
+    borderRadius: 4,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 22,
+    fontFamily: 'Inter-Bold',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: COLORS.slate,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E2E8F0',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    marginTop : 8,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'Inter-Medium',
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  studentCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  studentCardServed: {
+    borderColor: COLORS.mint,
+    backgroundColor: COLORS.mint + '08',
+  },
+  studentCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  studentAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   studentInfo: {
     flex: 1,
@@ -322,107 +549,187 @@ const styles = StyleSheet.create({
   studentName: {
     fontFamily: 'Inter-Bold',
     fontSize: 16,
-    color: theme.colors.text.primary,
+    color: '#0F172A',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  studentId: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    color: COLORS.slate,
     marginBottom: 4,
   },
-  studentDetail: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    marginBottom: 2,
+  allergyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.coral + '10',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
   },
-  allergiesText: {
+  allergyText: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    color: '#FF3B30',
-    marginTop: 4,
+    fontSize: 11,
+    color: COLORS.coral,
   },
-  checkIcon: {
-    marginLeft: theme.spacing.md,
+  statusIndicator: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusIndicatorServed: {
+    // Additional styling if needed
+  },
+  statusTextServed: {
+    fontSize: 11,
+    fontFamily: 'Inter-Bold',
+    color: COLORS.mint,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statusTextPending: {
+    fontSize: 11,
+    fontFamily: 'Inter-Bold',
+    color: COLORS.slate,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.xxl * 2,
+    paddingVertical: 60,
   },
-  emptyText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.md,
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: COLORS.slate,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    width: '100%',
-    maxHeight: '80%',
-    padding: theme.spacing.lg,
-    ...theme.shadows.lg,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingTop: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
+    color: '#0F172A',
+    marginBottom: 4,
+    letterSpacing: -0.3,
   },
   modalSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.md,
+    fontFamily: 'Inter-Medium',
+    color: COLORS.slate,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   mealList: {
-    maxHeight: 400,
+    maxHeight: 500,
   },
-  mealOption: {
+  mealCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border || '#E5E7EB',
+    gap: 14,
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
   },
-  mealOptionContent: {
+  mealCardDisabled: {
+    opacity: 0.5,
+  },
+  mealIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mealInfo: {
     flex: 1,
   },
-  mealOptionName: {
+  mealName: {
     fontSize: 16,
     fontFamily: 'Inter-Bold',
-    color: theme.colors.text.primary,
+    color: '#0F172A',
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
-  mealOptionNameDisabled: {
-    color: theme.colors.text.light,
+  mealNameDisabled: {
+    color: COLORS.slate,
   },
-  mealOptionDetails: {
+  mealCoverage: {
     fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: theme.colors.primary,
+    color: COLORS.ocean,
     marginBottom: 2,
   },
-  mealOptionQuantity: {
+  mealCoverageDisabled: {
+    color: COLORS.slate,
+  },
+  mealQuantity: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: theme.colors.text.secondary,
+    fontFamily: 'Inter-Medium',
+    color: COLORS.slate,
+  },
+  mealSelectIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.ocean + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  outOfStockBadge: {
+    backgroundColor: COLORS.coral + '15',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   outOfStockText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: '#DC2626',
+    fontSize: 11,
+    fontFamily: 'Inter-Bold',
+    color: COLORS.coral,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

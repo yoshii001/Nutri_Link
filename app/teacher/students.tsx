@@ -256,12 +256,7 @@ export default function StudentsScreen() {
     <View style={styles.container}>
       <TeacherHeader title="My Students" />
 
-      <View style={styles.addButtonContainer}>
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
-          <Plus color="#fff" size={20} />
-          <Text style={styles.addButtonText}>Add Student</Text>
-        </TouchableOpacity>
-      </View>
+     
 
       <View style={styles.searchContainer}>
         <TextInput
@@ -386,7 +381,7 @@ export default function StudentsScreen() {
                   />
                 </View>
 
-                {/* <View style={{ flex: 1 }}>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>Grade {teacherClass && '(Auto-filled)'}</Text>
                   <TextInput
                     style={[styles.input, teacherClass && styles.inputDisabled]}
@@ -395,7 +390,7 @@ export default function StudentsScreen() {
                     onChangeText={setGrade}
                     editable={!teacherClass}
                   />
-                </View> */}
+                </View>
               </View>
 
               <Text style={styles.inputLabel}>Parent Name *</Text>
@@ -415,15 +410,7 @@ export default function StudentsScreen() {
                 keyboardType="phone-pad"
               />
 
-              <Text style={styles.inputLabel}>Parent Email (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter parent email"
-                value={parentEmail}
-                onChangeText={setParentEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+             
 
               <Text style={styles.inputLabel}>Allergies</Text>
               <TextInput
@@ -490,8 +477,16 @@ export default function StudentsScreen() {
           </View>
         </View>
       </Modal>
+       <View style={styles.addButtonContainer}>
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
+          <Plus color="#fff" size={20} />
+          <Text style={styles.addButtonText}>Add Student</Text>
+        </TouchableOpacity>
+      </View>
 
       <TeacherBottomNav />
+
+      
     </View>
   );
 }
