@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Load Firebase config from Expo public environment variables.
 // These should be provided via `app.config.ts` or the environment in CI/CD.
@@ -25,6 +27,28 @@ if (!firebaseConfig.apiKey) {
   console.warn('[config/firebase] EXPO_PUBLIC_FIREBASE_API_KEY is not set. Initialize Firebase with real credentials via app.config.ts or environment variables.');
 }
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+// Use React Native persistence when running on native platforms so auth state
+// persists between app launches. We avoid a static import of
+// 'firebase/auth/react-native' because Metro may not resolve that path at
+// bundle-time. Instead we attempt to require it at runtime and fall back to
+// `getAuth` on web or if the require fails.
+export let auth: any;
+if (Platform.OS === 'web') {
+  auth = getAuth(app);
+} else {
+  try {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch (e) {
+    // If initializeAuth fails at runtime, fall back to getAuth and log the
+    // error so developers can investigate.
+    // eslint-disable-next-line no-console
+    console.warn('[config/firebase] Failed to initialize react-native auth persistence. Falling back to getAuth.', e);
+    auth = getAuth(app);
+  }
+}
+
 export const database = getDatabase(app);
 export default app;

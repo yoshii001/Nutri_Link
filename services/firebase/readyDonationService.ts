@@ -362,6 +362,15 @@ export const claimDonationByTeacher = async (
   console.log('claimDonationByTeacher called with:', { donationId, teacherId, teacherName });
 
   try {
+    const donationRef = ref(database, `readyDonations/${donationId}`);
+    const snapshot = await get(donationRef);
+
+    if (!snapshot.exists()) {
+      throw new Error('Donation not found');
+    }
+
+    const donation = snapshot.val() as ReadyDonation;
+
     await updateReadyDonation(donationId, {
       status: 'completed',
       completedAt: new Date().toISOString(),
@@ -369,6 +378,27 @@ export const claimDonationByTeacher = async (
       teacherName,
     });
     console.log('Donation claimed successfully');
+
+    if (donation.schoolId && donation.classId) {
+      console.log('Adding meal to class stock');
+      const { addMealToClassStock } = await import('./mealStockService');
+
+      const today = new Date().toISOString().split('T')[0];
+      const mealId = `${today}_${donationId}`;
+
+      await addMealToClassStock(donation.schoolId, donation.classId, mealId, {
+        mealName: donation.itemName || 'Donated Meal',
+        quantity: donation.quantity || 0,
+        coverage: donation.numberOfStudents,
+        unit: donation.unit || 'servings',
+        claimedAt: new Date().toISOString(),
+        claimedBy: teacherName,
+        donorName: donation.donorName,
+        description: donation.description,
+      });
+
+      console.log('Meal added to class stock successfully');
+    }
   } catch (error) {
     console.error('Error claiming donation:', error);
     throw error;

@@ -181,7 +181,7 @@ export default function StudentsScreen() {
         `Instructions:\n` +
         `1. Open the app and tap "Parent Login"\n` +
         `2. Enter the 8-character access code exactly as shown\n` +
-        `3. Code format: 7 capital letters + 1 symbol ($, @, #, or *)\n` +
+        `3. Code format: 7 letters (A-Z, a-z) + 1 symbol ($, @, #, or *)\n` +
         `4. Access your child's information\n\n` +
         `What you can do:\n` +
         `• View today's meal and donor information\n` +
@@ -386,7 +386,7 @@ export default function StudentsScreen() {
                   />
                 </View>
 
-                {/* <View style={{ flex: 1 }}>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>Grade {teacherClass && '(Auto-filled)'}</Text>
                   <TextInput
                     style={[styles.input, teacherClass && styles.inputDisabled]}
@@ -395,7 +395,7 @@ export default function StudentsScreen() {
                     onChangeText={setGrade}
                     editable={!teacherClass}
                   />
-                </View> */}
+                </View>
               </View>
 
               <Text style={styles.inputLabel}>Parent Name *</Text>

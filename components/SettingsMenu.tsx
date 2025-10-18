@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Alert } from 'react-native';
 import { MoveVertical as MoreVertical, User, Settings, LogOut } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -13,36 +13,38 @@ export default function SettingsMenu() {
 
   const handleSignOut = async () => {
     if (loading) return;
-    setLoading(true);
-    setVisible(false);
-    try {
-      await signOut();
-      // ensure navigation happens after sign out completes
-      // Defer navigation to avoid synchronous re-render while modal is closing
-      setTimeout(() => {
-        try {
-          router.replace('/login');
-        } catch (navErr) {
-          try {
-            router.push('/login');
-          } catch (e) {
-            console.warn('Router navigation after signOut failed', e);
-          }
-        }
-      }, 50);
-    } catch (err) {
-      console.error('Sign out failed', err);
-      // show a fallback alert if runtime exists
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { Alert } = require('react-native');
-        Alert.alert('Logout Failed', 'Unable to logout. Please try again.');
-      } catch (e) {
-        // ignore
-      }
-    } finally {
-      setLoading(false);
-    }
+    
+    // Show confirmation dialog
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', onPress: () => console.log('Logout cancelled') },
+        {
+          text: 'Logout',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              setVisible(false);
+              console.log('[SettingsMenu] Starting sign out...');
+              await signOut();
+              console.log('[SettingsMenu] Sign out completed successfully');
+            } catch (err) {
+              console.error('[SettingsMenu] Sign out failed', err);
+              setVisible(false);
+              Alert.alert(
+                'Logout Failed',
+                'Failed to logout. Please try again.',
+                [{ text: 'OK' }]
+              );
+            } finally {
+              setLoading(false);
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
   };
 
   const handleProfile = () => {

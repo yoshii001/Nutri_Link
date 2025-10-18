@@ -12,35 +12,30 @@ export interface ParentSession {
 }
 
 export const loginWithAccessCode = async (accessCode: string): Promise<ParentSession | null> => {
-  try {
-    const formattedCode = accessCode.trim();
+  const formattedCode = accessCode.trim();
 
-    if (!validateAccessCode(formattedCode)) {
-      throw new Error('Invalid code format. Code must be 7 capital letters followed by a symbol ($, @, #, or *)');
-    }
-
-    const result = await getStudentByAccessCode(formattedCode);
-
-    if (!result) {
-      throw new Error('Invalid access code. Please check with your teacher.');
-    }
-
-    const session: ParentSession = {
-      accessCode: formattedCode,
-      teacherId: result.teacherId,
-      studentKey: result.studentKey,
-      student: result.student,
-      loginTime: new Date().toISOString(),
-    };
-
-    await AsyncStorage.setItem('parentAccessCode', formattedCode);
-    await AsyncStorage.setItem('parentSession', JSON.stringify(session));
-
-    return session;
-  } catch (error) {
-    console.error('Error in loginWithAccessCode:', error);
-    throw error;
+  if (!validateAccessCode(formattedCode)) {
+    throw new Error('Invalid code format. Code must be 7 letters followed by a symbol ($, @, #, or *)');
   }
+
+  const result = await getStudentByAccessCode(formattedCode);
+
+  if (!result) {
+    throw new Error('Invalid access code. Please check with your teacher.');
+  }
+
+  const session: ParentSession = {
+    accessCode: formattedCode,
+    teacherId: result.teacherId,
+    studentKey: result.studentKey,
+    student: result.student,
+    loginTime: new Date().toISOString(),
+  };
+
+  await AsyncStorage.setItem('parentAccessCode', formattedCode);
+  await AsyncStorage.setItem('parentSession', JSON.stringify(session));
+
+  return session;
 };
 
 export const getParentSession = async (): Promise<ParentSession | null> => {

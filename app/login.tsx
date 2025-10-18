@@ -155,6 +155,53 @@ export default function LoginScreen() {
             </View>
           </View>
         </View>
+
+        <View style={styles.testCredentials}>
+          <View style={styles.testHeader}>
+            <View style={styles.testDivider} />
+            <Text style={styles.testTitle}>Test Accounts</Text>
+            <View style={styles.testDivider} />
+          </View>
+
+          <View style={styles.testGrid}>
+            <View style={styles.testItem}>
+              <View style={[styles.testBadge, { backgroundColor: theme.colors.primary }]}>
+                <Text style={styles.testBadgeText}>Admin</Text>
+              </View>
+              <Text style={styles.testText}>admin@gmail.com</Text>
+            </View>
+
+            <View style={styles.testItem}>
+              <View style={[styles.testBadge, { backgroundColor: theme.colors.secondary }]}>
+                <Text style={styles.testBadgeText}>Teacher</Text>
+              </View>
+              <Text style={styles.testText}>teacher1@gmail.com</Text>
+            </View>
+
+            <View style={styles.testItem}>
+              <View style={[styles.testBadge, { backgroundColor: theme.colors.accent }]}>
+                <Text style={styles.testBadgeText}>Principal</Text>
+              </View>
+              <Text style={styles.testText}>principle@gmail.com</Text>
+            </View>
+
+            <View style={styles.testItem}>
+              <View style={[styles.testBadge, { backgroundColor: theme.colors.primaryDark }]}>
+                <Text style={styles.testBadgeText}>Donor</Text>
+              </View>
+              <Text style={styles.testText}>donor1@gmail.com</Text>
+            </View>
+
+            <View style={styles.testItem}>
+              <View style={[styles.testBadge, { backgroundColor: theme.colors.secondaryDark }]}>
+                <Text style={styles.testBadgeText}>Parent</Text>
+              </View>
+              <Text style={styles.testText}>parent1@gmail.com</Text>
+            </View>
+          </View>
+
+          <Text style={styles.testNote}>Use any password for testing</Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -206,7 +253,7 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   contentContainer: {
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
   },
   formCard: {
     backgroundColor: theme.colors.surface,

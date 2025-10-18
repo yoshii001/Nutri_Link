@@ -15,9 +15,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, ArrowLeft } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
 import { loginWithAccessCode } from '@/services/parent/parentAuthService';
+import LanguageSelector from '@/components/LanguageSelector';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ParentLoginScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [accessCode, setAccessCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -35,19 +38,18 @@ export default function ParentLoginScreen() {
     try {
       const session = await loginWithAccessCode(accessCode);
 
-      if (!session) {
+      if (session) {
+        router.replace('/parent/portal');
+      } else {
+        setLoading(false);
         if (Platform.OS === 'web') {
           alert('Login failed. Please try again.');
         } else {
           Alert.alert('Error', 'Login failed. Please try again.');
         }
-        setLoading(false);
-        return;
       }
-
-      router.replace('/parent/portal');
     } catch (error: any) {
-      console.error('Error during parent login:', error);
+      setLoading(false);
       const errorMessage = error?.message || 'Login failed. Please try again.';
 
       if (Platform.OS === 'web') {
@@ -55,8 +57,6 @@ export default function ParentLoginScreen() {
       } else {
         Alert.alert('Error', errorMessage);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -91,6 +91,9 @@ export default function ParentLoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.languageSelectorContainer}>
+            <LanguageSelector />
+          </View>
 
           <View style={styles.content}>
             <View style={styles.card}>
@@ -101,14 +104,14 @@ export default function ParentLoginScreen() {
                 style={styles.input}
                 value={accessCode}
                 onChangeText={(text) => setAccessCode(text)}
-                placeholder="XXXXXXX$"
+                placeholder="XxXxXxX$"
                 placeholderTextColor="#9CA3AF"
-                autoCapitalize="characters"
+                autoCapitalize="none"
                 autoCorrect={false}
                 maxLength={8}
               />
 
-              <Text style={styles.example}>7 letters + 1 symbol ($, @, #, *)</Text>
+              <Text style={styles.example}>7 letters (A-Z, a-z) + 1 symbol ($, @, #, *)</Text>
 
               <TouchableOpacity
                 style={[styles.loginButton, loading && styles.loginButtonDisabled]}
@@ -184,6 +187,10 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingBottom: 40,
+  },
+  languageSelectorContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
   content: {
     padding: 20,

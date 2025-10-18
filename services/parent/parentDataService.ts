@@ -4,7 +4,7 @@ import { getReadyDonationsByClassId } from '@/services/firebase/readyDonationSer
 import { getDonorAverageRating } from '@/services/firebase/donorRatingService';
 import { getMealStockByClass } from '@/services/firebase/mealStockService';
 import { getMealPlansBySchoolId } from '@/services/firebase/mealPlanService';
-import { getClassById } from '@/services/firebase/classService';
+import { getClassById, findSchoolIdByClassId } from '@/services/firebase/classService';
 import { StudentProfile, MealPlan } from '@/types';
 
 export interface TodayMealInfo {
@@ -126,26 +126,46 @@ export const getTodayDonorInfo = async (classId: string): Promise<DonorInfo | nu
 
 export const getTodayMealFromStock = async (schoolId: string, classId: string): Promise<TodayMealStock | null> => {
   try {
+    console.log('[Parent] Getting meal stock for schoolId:', schoolId, 'classId:', classId);
     const mealStocks = await getMealStockByClass(schoolId, classId);
-    const today = new Date().toISOString().split('T')[0];
+    console.log('[Parent] Retrieved meal stocks:', mealStocks);
 
-    const todayMeal = mealStocks[today];
+    const today = new Date().toISOString().split('T')[0];
+    console.log('[Parent] Today date:', today);
+
+    let todayMeal = null;
+    let todayMealKey = '';
+
+    for (const [key, meal] of Object.entries(mealStocks)) {
+      console.log('[Parent] Checking meal key:', key, 'against today:', today);
+      if (key.startsWith(today)) {
+        todayMeal = meal;
+        todayMealKey = key;
+        console.log('[Parent] Found today meal:', todayMeal);
+        break;
+      }
+    }
 
     if (!todayMeal) {
+      console.log('[Parent] No meal found for today');
       return null;
     }
 
     let rating = { average: 0, count: 0 };
-    let donorId = undefined;
-    if (todayMeal.donorName) {
+    let donorId = todayMeal.donorId;
+
+    if (!donorId && todayMeal.donorName) {
       const allDonations = await getReadyDonationsByClassId(classId);
       const donorDonation = Object.values(allDonations).find(
         (d) => d.donorName === todayMeal.donorName
       );
       if (donorDonation?.donorId) {
         donorId = donorDonation.donorId;
-        rating = await getDonorAverageRating(donorDonation.donorId);
       }
+    }
+
+    if (donorId) {
+      rating = await getDonorAverageRating(donorId);
     }
 
     return {
@@ -224,13 +244,15 @@ export const getScheduledMeals = async (schoolId: string, classId: string): Prom
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const scheduledMeals: ScheduledMealInfo[] = [];
+    const seenDates = new Set<string>();
 
     Object.entries(mealStocks).forEach(([dateId, meal]) => {
       const mealDate = dateId.split('_')[0];
       const mealDateTime = new Date(mealDate);
       mealDateTime.setHours(0, 0, 0, 0);
 
-      if (mealDateTime >= today) {
+      if (mealDateTime >= today && !seenDates.has(mealDate)) {
+        seenDates.add(mealDate);
         scheduledMeals.push({
           date: mealDate,
           mealName: meal.mealName,
@@ -247,18 +269,38 @@ export const getScheduledMeals = async (schoolId: string, classId: string): Prom
     scheduledMeals.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     return scheduledMeals.slice(0, 7);
   } catch (error) {
+    const foundSchoolId = await findSchoolIdByClassId(classId);
+    if (foundSchoolId) {
+      console.warn('[Parent] Fallback schoolId found for classId:', classId, foundSchoolId);
+    }
+
     console.error('Error getting scheduled meals:', error);
     return [];
   }
 };
 
-export const getSchoolIdFromClass = async (teacherSchoolId: string, classId: string): Promise<string> => {
+export const getSchoolIdFromClass = async (teacherId: string, classId: string): Promise<string> => {
   try {
-    const classInfo = await getClassById(teacherSchoolId, classId);
-    return classInfo?.schoolId || teacherSchoolId;
+    console.log('[Parent] Getting school ID for teacherId (userId):', teacherId, 'classId:', classId);
+
+    const { getTeacherByUserId } = await import('@/services/firebase/teacherService');
+    const teacherData = await getTeacherByUserId(teacherId);
+
+    if (!teacherData) {
+      console.log('[Parent] Teacher not found for user ID:', teacherId);
+      return teacherId;
+    }
+
+    console.log('[Parent] Found teacher, schoolId:', teacherData.teacher.schoolId);
+    const schoolId = teacherData.teacher.schoolId;
+
+    const classInfo = await getClassById(schoolId, classId);
+    console.log('[Parent] Class info:', classInfo);
+
+    return classInfo?.schoolId || schoolId;
   } catch (error) {
     console.error('Error getting school ID from class:', error);
-    return teacherSchoolId;
+    return teacherId;
   }
 };
 

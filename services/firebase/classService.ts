@@ -99,3 +99,27 @@ export const listenToClasses = (
 export const updateClassStudentCount = async (schoolId: string, classId: string, count: number): Promise<void> => {
   await updateClass(schoolId, classId, { numberOfStudents: count });
 };
+
+export const findSchoolIdByClassId = async (classId: string): Promise<string | null> => {
+  try {
+    const allClassesRef = ref(database, 'classes');
+    const snapshot = await get(allClassesRef);
+
+    if (!snapshot.exists()) return null;
+
+    const allSchools = snapshot.val();
+
+    for (const [schoolId, schoolClasses] of Object.entries(allSchools)) {
+      if (typeof schoolClasses === 'object' && schoolClasses !== null) {
+        if (classId in schoolClasses) {
+          return schoolId;
+        }
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error('classService.findSchoolIdByClassId error:', err);
+    return null;
+  }
+};
