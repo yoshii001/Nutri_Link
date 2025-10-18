@@ -256,12 +256,7 @@ export default function StudentsScreen() {
     <View style={styles.container}>
       <TeacherHeader title="My Students" />
 
-      <View style={styles.addButtonContainer}>
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
-          <Plus color="#fff" size={20} />
-          <Text style={styles.addButtonText}>Add Student</Text>
-        </TouchableOpacity>
-      </View>
+     
 
       <View style={styles.searchContainer}>
         <TextInput
@@ -490,8 +485,16 @@ export default function StudentsScreen() {
           </View>
         </View>
       </Modal>
+       <View style={styles.addButtonContainer}>
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
+          <Plus color="#fff" size={20} />
+          <Text style={styles.addButtonText}>Add Student</Text>
+        </TouchableOpacity>
+      </View>
 
       <TeacherBottomNav />
+
+      
     </View>
   );
 }
