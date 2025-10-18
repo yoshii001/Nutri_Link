@@ -386,7 +386,7 @@ export default function StudentsScreen() {
                   />
                 </View>
 
-                <View style={{ flex: 1 }}>
+                {/* <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>Grade {teacherClass && '(Auto-filled)'}</Text>
                   <TextInput
                     style={[styles.input, teacherClass && styles.inputDisabled]}
@@ -395,7 +395,7 @@ export default function StudentsScreen() {
                     onChangeText={setGrade}
                     editable={!teacherClass}
                   />
-                </View>
+                </View> */}
               </View>
 
               <Text style={styles.inputLabel}>Parent Name *</Text>

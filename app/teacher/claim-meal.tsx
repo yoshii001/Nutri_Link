@@ -190,6 +190,68 @@ export default function ClaimMealScreen() {
     ([, a], [, b]) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  // Helpers: generate simple HTML for a donation and print/share as PDF
+  const generateDonationHTML = (donation: ReadyDonation) => {
+    return `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <style>body{font-family: Arial, Helvetica, sans-serif; padding:20px;} .row{margin-bottom:8px;} .label{font-weight:600;color:#374151}</style>
+        </head>
+        <body>
+          <h2>Donation: ${donation.itemName || 'Meal'}</h2>
+          <div class="row"><span class="label">Donor:</span> ${donation.donorName || ''}</div>
+          <div class="row"><span class="label">Quantity:</span> ${donation.quantity || ''} ${donation.unit || ''}</div>
+          <div class="row"><span class="label">Coverage:</span> ${donation.numberOfStudents || ''} students</div>
+          <div class="row"><span class="label">Class:</span> ${donation.className || 'N/A'}</div>
+          <div class="row"><span class="label">Pickup Location:</span> ${donation.location || ''}</div>
+          <div class="row"><span class="label">Description:</span> ${donation.description || ''}</div>
+          <div style="margin-top:20px;color:#6B7280">Generated: ${new Date().toLocaleString()}</div>
+        </body>
+      </html>
+    `;
+  };
+
+  const generateDonationPDF = async (donation: ReadyDonation, id: string) => {
+    // guarded requires
+    let Print: any = null;
+    let Sharing: any = null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      Print = require('expo-print');
+    } catch (err) {
+      console.warn('expo-print not available');
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      Sharing = require('expo-sharing');
+    } catch (err) {
+      console.warn('expo-sharing not available');
+    }
+
+    if (!Print) {
+      Alert.alert('Printing not available', 'expo-print is not installed on this platform');
+      return;
+    }
+
+    const html = generateDonationHTML(donation);
+    const { uri } = await Print.printToFileAsync({ html });
+
+    if (!Sharing) {
+      Alert.alert('Saved', 'PDF saved to: ' + uri);
+      return;
+    }
+
+    const available = await Sharing.isAvailableAsync();
+    if (available) {
+      await Sharing.shareAsync(uri, { dialogTitle: donation.itemName || 'Donation' });
+    } else {
+      Alert.alert('Saved', 'PDF saved to: ' + uri);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -327,17 +389,33 @@ export default function ClaimMealScreen() {
                     onPress={() => handleClaim(id, donation)}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient
-                      colors={[theme.colors.primary, theme.colors.accent]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.claimButtonGradient}
-                    >
-                      <Package size={20} color={theme.colors.surface} />
-                      <Text style={styles.claimButtonText}>Claim for My Class</Text>
-                    </LinearGradient>
+                   
                   </TouchableOpacity>
                 )}
+
+                {/* Print PDF button */}
+                <TouchableOpacity
+                  style={[styles.claimButton, { marginTop: 8, backgroundColor: theme.colors.surface }]}
+                  onPress={async () => {
+                    try {
+                      await generateDonationPDF(donation, id);
+                    } catch (err) {
+                      console.error('Error generating PDF', err);
+                      Alert.alert('Error', 'Could not generate PDF');
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={[theme.colors.surface, theme.colors.surface]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.claimButtonGradient}
+                  >
+                    <Package size={18} color={theme.colors.primary} />
+                    <Text style={[styles.claimButtonText, { color: theme.colors.primary }]}>Print Donation PDF</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
 
                 {isClaimed && (
                   <View style={[styles.completedBox, { backgroundColor: '#D1FAE5' }]}>
