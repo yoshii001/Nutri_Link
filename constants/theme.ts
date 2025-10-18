@@ -18,6 +18,7 @@ export const theme = {
     success: '#10B981',
     warning: '#FBBF24',
     error: '#EF4444',
+    errorLight: '#FEE2E2',
     border: '#E5E7EB',
     borderLight: '#F3F4F6',
   },

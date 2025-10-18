@@ -26,7 +26,9 @@ import {
   ThumbsUp,
 } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { StudentProfile } from '@/types';
+import LanguageSelector from '@/components/LanguageSelector';
 import {
   getParentSession,
   logoutParent
@@ -51,6 +53,7 @@ import { submitDonorRating } from '@/services/parent/parentRatingService';
 
 export default function ParentPortalScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [teacherId, setTeacherId] = useState('');
@@ -91,11 +94,18 @@ export default function ParentPortalScreen() {
       setAllergies(session.student.allergies || '');
       setMealFeedback(session.student.mealFeedbacks || '');
 
+      console.log('[Parent Portal] Student data:', {
+        studentId: session.student.studentId,
+        classId: session.student.classId,
+        teacherId: session.teacherId
+      });
+
       let actualSchoolId = session.teacherId;
 
       if (session.student.classId && session.teacherId) {
         try {
           actualSchoolId = await getSchoolIdFromClass(session.teacherId, session.student.classId);
+          console.log('[Parent Portal] Got school ID:', actualSchoolId);
           setSchoolId(actualSchoolId);
         } catch (err) {
           console.error('Error getting school ID:', err);
@@ -105,13 +115,16 @@ export default function ParentPortalScreen() {
 
         try {
           const meal = await getTodayMealInfo(session.teacherId, session.student.studentId);
+          console.log('[Parent Portal] Today meal from tracking:', meal);
           setTodayMeal(meal);
         } catch (err) {
           console.error('Error getting today meal:', err);
         }
 
         try {
+          console.log('[Parent Portal] Fetching meal stock with schoolId:', actualSchoolId, 'classId:', session.student.classId);
           const mealStock = await getTodayMealFromStock(actualSchoolId, session.student.classId);
+          console.log('[Parent Portal] Meal stock result:', mealStock);
           setTodayMealStock(mealStock);
         } catch (err) {
           console.error('Error getting meal stock:', err);
@@ -163,16 +176,16 @@ export default function ParentPortalScreen() {
       await updateAllergiesAndFeedback(teacherId, studentKey, allergies, mealFeedback);
 
       if (Platform.OS === 'web') {
-        alert('Information updated successfully!');
+        alert(t('parent.infoUpdated'));
       } else {
-        Alert.alert('Success', 'Information updated successfully!');
+        Alert.alert(t('common.success'), t('parent.infoUpdated'));
       }
     } catch (error) {
       console.error('Save error:', error);
       if (Platform.OS === 'web') {
-        alert('Failed to save information');
+        alert(t('parent.failedToSave'));
       } else {
-        Alert.alert('Error', 'Failed to save information');
+        Alert.alert(t('common.error'), t('parent.failedToSave'));
       }
     }
   };
@@ -180,9 +193,9 @@ export default function ParentPortalScreen() {
   const handleSubmitRating = async (targetDonorName: string, donorId?: string) => {
     if (donorRating === 0) {
       if (Platform.OS === 'web') {
-        alert('Please select a rating');
+        alert(t('parent.selectRating'));
       } else {
-        Alert.alert('Error', 'Please select a rating');
+        Alert.alert(t('common.error'), t('parent.selectRating'));
       }
       return;
     }
@@ -209,9 +222,9 @@ export default function ParentPortalScreen() {
       });
 
       if (Platform.OS === 'web') {
-        alert('Thank you for rating the donor!');
+        alert(t('parent.thankYouRating'));
       } else {
-        Alert.alert('Success', 'Thank you for rating the donor!');
+        Alert.alert(t('common.success'), t('parent.thankYouRating'));
       }
 
       setDonorRating(0);
@@ -224,9 +237,9 @@ export default function ParentPortalScreen() {
     } catch (error) {
       console.error('Rating error:', error);
       if (Platform.OS === 'web') {
-        alert('Failed to submit rating');
+        alert(t('parent.failedToRate'));
       } else {
-        Alert.alert('Error', 'Failed to submit rating');
+        Alert.alert(t('common.error'), t('parent.failedToRate'));
       }
     }
   };
@@ -239,7 +252,7 @@ export default function ParentPortalScreen() {
   if (loading || !student) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -259,8 +272,8 @@ export default function ParentPortalScreen() {
         <View style={styles.headerContent}>
           <Heart size={40} color="#FFFFFF" strokeWidth={2.5} />
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Hello, {student.parentName}!</Text>
-            <Text style={styles.headerSubtitle}>{student.name}'s Meal Info</Text>
+            <Text style={styles.headerTitle}>{t('parent.hello')}, {student.parentName}!</Text>
+            <Text style={styles.headerSubtitle}>{student.name}{t('parent.mealInfo')}</Text>
           </View>
           <TouchableOpacity
             style={styles.logoutButton}
@@ -271,6 +284,10 @@ export default function ParentPortalScreen() {
           </TouchableOpacity>
         </View>
       </LinearGradient>
+
+      <View style={styles.languageSelectorContainer}>
+        <LanguageSelector />
+      </View>
 
       <ScrollView
         style={styles.content}
@@ -283,9 +300,9 @@ export default function ParentPortalScreen() {
             <User size={32} color="#10B981" strokeWidth={2.5} />
           </View>
           <Text style={styles.welcomeTitle}>{student.name}</Text>
-          <Text style={styles.welcomeSubtitle}>Grade {student.grade} • Age {student.age}</Text>
+          <Text style={styles.welcomeSubtitle}>{t('parent.grade')} {student.grade} • {t('parent.age')} {student.age}</Text>
           <View style={styles.accessCodeBox}>
-            <Text style={styles.accessCodeLabel}>Your Access Code</Text>
+            <Text style={styles.accessCodeLabel}>{t('parent.yourAccessCode')}</Text>
             <Text style={styles.accessCode}>{student.parentAccessToken}</Text>
           </View>
         </View>
@@ -294,7 +311,7 @@ export default function ParentPortalScreen() {
           <View style={styles.bigCard}>
             <View style={styles.bigCardHeader}>
               <Utensils size={28} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.bigCardTitle}>Today's Meal</Text>
+              <Text style={styles.bigCardTitle}>{t('parent.todayMeal')}</Text>
             </View>
             <View style={styles.mealContent}>
               <Text style={styles.bigMealName}>{todayMealStock.mealName}</Text>
@@ -303,31 +320,31 @@ export default function ParentPortalScreen() {
               )}
               <View style={styles.mealInfoRow}>
                 <View style={styles.mealInfoItem}>
-                  <Text style={styles.mealInfoLabel}>Amount</Text>
+                  <Text style={styles.mealInfoLabel}>{t('parent.amount')}</Text>
                   <Text style={styles.mealInfoValue}>{todayMealStock.quantity} {todayMealStock.unit}</Text>
                 </View>
                 <View style={styles.mealInfoItem}>
-                  <Text style={styles.mealInfoLabel}>For</Text>
-                  <Text style={styles.mealInfoValue}>{todayMealStock.coverage} Students</Text>
+                  <Text style={styles.mealInfoLabel}>{t('parent.for')}</Text>
+                  <Text style={styles.mealInfoValue}>{todayMealStock.coverage} {t('parent.students')}</Text>
                 </View>
               </View>
 
               <View style={styles.donorBox}>
-                <Text style={styles.donorLabel}>Donated By</Text>
+                <Text style={styles.donorLabel}>{t('parent.donatedBy')}</Text>
                 <Text style={styles.donorName}>{todayMealStock.donorName}</Text>
                 {todayMealStock.totalRatings > 0 && (
                   <View style={styles.ratingDisplay}>
                     <Star size={18} color="#F59E0B" fill="#F59E0B" strokeWidth={2} />
                     <Text style={styles.ratingText}>
-                      {todayMealStock.averageRating.toFixed(1)} ({todayMealStock.totalRatings} ratings)
+                      {todayMealStock.averageRating.toFixed(1)} ({todayMealStock.totalRatings} {t('parent.ratings')})
                     </Text>
                   </View>
                 )}
               </View>
 
               <View style={styles.ratingSection}>
-                <Text style={styles.ratingSectionTitle}>How was the meal?</Text>
-                <Text style={styles.ratingSectionSubtitle}>Tap the stars to rate</Text>
+                <Text style={styles.ratingSectionTitle}>{t('parent.howWasMeal')}</Text>
+                <Text style={styles.ratingSectionSubtitle}>{t('parent.tapStars')}</Text>
                 <View style={styles.starsRow}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity
@@ -347,12 +364,12 @@ export default function ParentPortalScreen() {
                 </View>
                 {donorRating > 0 && (
                   <Text style={styles.ratingLabel}>
-                    {donorRating === 1 ? 'Poor' : donorRating === 2 ? 'Fair' : donorRating === 3 ? 'Good' : donorRating === 4 ? 'Very Good' : 'Excellent'}
+                    {donorRating === 1 ? t('parent.poor') : donorRating === 2 ? t('parent.fair') : donorRating === 3 ? t('parent.good') : donorRating === 4 ? t('parent.veryGood') : t('parent.excellent')}
                   </Text>
                 )}
                 <TextInput
                   style={styles.commentInput}
-                  placeholder="Add your comment (optional)"
+                  placeholder={t('parent.addComment')}
                   placeholderTextColor="#9CA3AF"
                   value={ratingComment}
                   onChangeText={setRatingComment}
@@ -371,7 +388,7 @@ export default function ParentPortalScreen() {
                     style={styles.bigButtonGradient}
                   >
                     <ThumbsUp size={22} color="#FFFFFF" strokeWidth={2.5} />
-                    <Text style={styles.bigButtonText}>Submit Rating</Text>
+                    <Text style={styles.bigButtonText}>{t('parent.submitRating')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -380,8 +397,8 @@ export default function ParentPortalScreen() {
         ) : (
           <View style={styles.emptyCard}>
             <Utensils size={48} color="#D1D5DB" strokeWidth={2} />
-            <Text style={styles.emptyTitle}>No Meal Today</Text>
-            <Text style={styles.emptyText}>There is no meal scheduled for today</Text>
+            <Text style={styles.emptyTitle}>{t('parent.noMealToday')}</Text>
+            <Text style={styles.emptyText}>{t('parent.noMealScheduled')}</Text>
           </View>
         )}
 
@@ -389,72 +406,113 @@ export default function ParentPortalScreen() {
           <View style={styles.statusCard}>
             <View style={styles.statusHeader}>
               <Home size={24} color="#10B981" strokeWidth={2.5} />
-              <Text style={styles.statusTitle}>Meal Status</Text>
+              <Text style={styles.statusTitle}>{t('parent.mealStatus')}</Text>
             </View>
             <View style={todayMeal.mealServed ? styles.statusServed : styles.statusPending}>
               <Text style={styles.statusText}>
-                {todayMeal.mealServed ? '✓ Meal Served' : '⏳ Not Served Yet'}
+                {todayMeal.mealServed ? t('parent.mealServed') : t('parent.notServedYet')}
               </Text>
               {todayMeal.time && (
-                <Text style={styles.statusTime}>at {todayMeal.time}</Text>
+                <Text style={styles.statusTime}>{t('parent.at')} {todayMeal.time}</Text>
               )}
             </View>
             {todayMeal.notes && (
               <View style={styles.notesBox}>
-                <Text style={styles.notesLabel}>Teacher's Note:</Text>
+                <Text style={styles.notesLabel}>{t('parent.teacherNote')}</Text>
                 <Text style={styles.notesText}>{todayMeal.notes}</Text>
               </View>
             )}
           </View>
         )}
 
-        {(scheduledMeals.length > 0 || approvedPlans.length > 0) && (
+        {scheduledMeals.length > 0 && (
+          <View style={styles.scheduledSection}>
+            <View style={styles.scheduledHeader}>
+              <Calendar size={28} color="#6366F1" strokeWidth={2.5} />
+              <View style={styles.scheduledHeaderText}>
+                <Text style={styles.scheduledTitle}>{t('parent.scheduledMeals')}</Text>
+                <Text style={styles.scheduledSubtitle}>{t('parent.assignedToClass')}</Text>
+              </View>
+            </View>
+
+            {scheduledMeals.map((meal, index) => {
+              const mealDate = new Date(meal.date);
+              const isToday = meal.date === new Date().toISOString().split('T')[0];
+              const dayOfWeek = mealDate.toLocaleDateString('en-US', { weekday: 'short' });
+              const monthDay = mealDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+              return (
+                <View key={index} style={[styles.scheduledMealCard, isToday && styles.scheduledMealCardToday]}>
+                  <View style={styles.scheduledMealHeader}>
+                    <View style={[styles.scheduledDateBadge, isToday && styles.scheduledDateBadgeToday]}>
+                      <Text style={[styles.scheduledDayOfWeek, isToday && styles.scheduledDayOfWeekToday]}>{dayOfWeek}</Text>
+                      <Text style={[styles.scheduledMonthDay, isToday && styles.scheduledMonthDayToday]}>{monthDay}</Text>
+                    </View>
+                    <View style={styles.scheduledMealDetails}>
+                      <Text style={styles.scheduledMealName}>{meal.mealName}</Text>
+                      {meal.description && (
+                        <Text style={styles.scheduledMealDescription} numberOfLines={2}>{meal.description}</Text>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.scheduledMealFooter}>
+                    <View style={styles.scheduledMealInfoRow}>
+                      <View style={styles.scheduledMealInfoBadge}>
+                        <Text style={styles.scheduledMealInfoLabel}>{t('parent.amount')}</Text>
+                        <Text style={styles.scheduledMealInfoValue}>{meal.quantity} {meal.unit}</Text>
+                      </View>
+                      <View style={styles.scheduledMealInfoBadge}>
+                        <Text style={styles.scheduledMealInfoLabel}>{t('parent.serves')}</Text>
+                        <Text style={styles.scheduledMealInfoValue}>{meal.coverage} {t('parent.kids')}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.scheduledDonorInfo}>
+                      <Text style={styles.scheduledDonorLabel}>{t('parent.providedBy')}</Text>
+                      <Text style={styles.scheduledDonorName}>{meal.donorName}</Text>
+                    </View>
+                  </View>
+                  {isToday && (
+                    <View style={styles.todayIndicator}>
+                      <Text style={styles.todayIndicatorText}>{t('parent.today')}</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {scheduledMeals.length === 0 && approvedPlans.length > 0 && (
           <View style={styles.upcomingCard}>
             <View style={styles.upcomingHeader}>
               <Calendar size={24} color="#6366F1" strokeWidth={2.5} />
-              <Text style={styles.upcomingTitle}>Upcoming Meals</Text>
+              <Text style={styles.upcomingTitle}>{t('parent.upcomingMealPlans')}</Text>
             </View>
 
-            {scheduledMeals.length > 0 ? (
-              scheduledMeals.slice(0, 3).map((meal, index) => (
-                <View key={index} style={styles.upcomingMealItem}>
-                  <View style={styles.upcomingDate}>
-                    <Text style={styles.upcomingDateText}>
-                      {new Date(meal.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                  <View style={styles.upcomingMealInfo}>
-                    <Text style={styles.upcomingMealName}>{meal.mealName}</Text>
-                    <Text style={styles.upcomingMealDonor}>by {meal.donorName}</Text>
-                  </View>
+            {approvedPlans.slice(0, 3).map((plan, index) => (
+              <View key={index} style={styles.upcomingMealItem}>
+                <View style={styles.upcomingDate}>
+                  <Text style={styles.upcomingDateText}>
+                    {new Date(plan.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
                 </View>
-              ))
-            ) : approvedPlans.length > 0 ? (
-              approvedPlans.slice(0, 3).map((plan, index) => (
-                <View key={index} style={styles.upcomingMealItem}>
-                  <View style={styles.upcomingDate}>
-                    <Text style={styles.upcomingDateText}>
-                      {new Date(plan.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                  <View style={styles.upcomingMealInfo}>
-                    <Text style={styles.upcomingMealName}>{plan.menu[0]?.mealName || 'Meal Plan'}</Text>
-                    <Text style={styles.upcomingMealDonor}>{plan.menu.length} item(s) planned</Text>
-                  </View>
+                <View style={styles.upcomingMealInfo}>
+                  <Text style={styles.upcomingMealName}>{plan.menu[0]?.mealName || t('parent.mealPlan')}</Text>
+                  <Text style={styles.upcomingMealDonor}>{plan.menu.length} {t('parent.itemsPlanned')}</Text>
                 </View>
-              ))
-            ) : null}
+              </View>
+            ))}
           </View>
         )}
 
         <View style={styles.inputCard}>
           <View style={styles.inputHeader}>
             <AlertCircle size={24} color="#EF4444" strokeWidth={2.5} />
-            <Text style={styles.inputTitle}>Allergy Info</Text>
+            <Text style={styles.inputTitle}>{t('parent.allergyInfo')}</Text>
           </View>
           <TextInput
             style={styles.bigInput}
-            placeholder="List any allergies or food restrictions"
+            placeholder={t('parent.allergyPlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={allergies}
             onChangeText={setAllergies}
@@ -466,11 +524,11 @@ export default function ParentPortalScreen() {
         <View style={styles.inputCard}>
           <View style={styles.inputHeader}>
             <MessageSquare size={24} color="#3B82F6" strokeWidth={2.5} />
-            <Text style={styles.inputTitle}>Your Feedback</Text>
+            <Text style={styles.inputTitle}>{t('parent.yourFeedback')}</Text>
           </View>
           <TextInput
             style={styles.bigInput}
-            placeholder="Share your thoughts about the meals"
+            placeholder={t('parent.feedbackPlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={mealFeedback}
             onChangeText={setMealFeedback}
@@ -490,7 +548,7 @@ export default function ParentPortalScreen() {
             end={{ x: 1, y: 0 }}
             style={styles.bigButtonGradient}
           >
-            <Text style={styles.bigButtonText}>Save Information</Text>
+            <Text style={styles.bigButtonText}>{t('parent.saveInformation')}</Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -520,6 +578,10 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 20,
+  },
+  languageSelectorContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   headerContent: {
     flexDirection: 'row',
@@ -944,5 +1006,159 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#9CA3AF',
     textAlign: 'center',
+  },
+  scheduledSection: {
+    marginBottom: 16,
+  },
+  scheduledHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  scheduledHeaderText: {
+    flex: 1,
+  },
+  scheduledTitle: {
+    fontSize: 22,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+  },
+  scheduledSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  scheduledMealCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  scheduledMealCardToday: {
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+  },
+  scheduledMealHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  scheduledDateBadge: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  scheduledDateBadgeToday: {
+    backgroundColor: '#10B981',
+  },
+  scheduledDayOfWeek: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#6366F1',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  scheduledDayOfWeekToday: {
+    color: '#FFFFFF',
+  },
+  scheduledMonthDay: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#4338CA',
+    marginTop: 2,
+  },
+  scheduledMonthDayToday: {
+    color: '#FFFFFF',
+  },
+  scheduledMealDetails: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  scheduledMealName: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  scheduledMealDescription: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  scheduledMealFooter: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 12,
+  },
+  scheduledMealInfoRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  scheduledMealInfoBadge: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  scheduledMealInfoLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  scheduledMealInfoValue: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#111827',
+  },
+  scheduledDonorInfo: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+  },
+  scheduledDonorLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#3B82F6',
+    marginBottom: 2,
+  },
+  scheduledDonorName: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#1E40AF',
+  },
+  todayIndicator: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  todayIndicatorText: {
+    fontSize: 11,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

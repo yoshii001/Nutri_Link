@@ -15,9 +15,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, ArrowLeft } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
 import { loginWithAccessCode } from '@/services/parent/parentAuthService';
+import LanguageSelector from '@/components/LanguageSelector';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ParentLoginScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [accessCode, setAccessCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -91,6 +94,9 @@ export default function ParentLoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.languageSelectorContainer}>
+            <LanguageSelector />
+          </View>
 
           <View style={styles.content}>
             <View style={styles.card}>
@@ -184,6 +190,10 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingBottom: 40,
+  },
+  languageSelectorContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
   content: {
     padding: 20,

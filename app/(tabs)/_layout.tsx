@@ -1,15 +1,25 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { LayoutDashboard, Package, UtensilsCrossed, DollarSign, MessageSquare, FileText, Settings, ClipboardCheck, History, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import SettingsMenu from '@/components/SettingsMenu';
 import { theme } from '@/constants/theme';
+import { useEffect } from 'react';
 
 export default function TabLayout() {
   const { userData } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!userData) {
+      router.replace('/login');
+    }
+  }, [userData]);
+
+  if (!userData) {
+    return null;
+  }
 
   const getTabsForRole = () => {
-    if (!userData) return [];
-
     const commonTabs = [
       { name: 'dashboard', title: 'Dashboard', icon: LayoutDashboard },
     ];

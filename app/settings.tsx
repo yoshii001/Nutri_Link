@@ -10,14 +10,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Bell, Moon, Globe, Lock, Info, Circle as HelpCircle, FileText, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Bell, Moon, Lock, Info, Circle as HelpCircle, FileText, Trash2, Key } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { theme } from '@/constants/theme';
+import LanguageSelector from '@/components/LanguageSelector';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, userData } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -190,24 +191,12 @@ export default function SettingsScreen() {
               />
             </View>
 
-            <View style={styles.divider} />
-
-            <TouchableOpacity
-              style={styles.settingRow}
-              onPress={() => Alert.alert('Language', 'Language selection coming soon!')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingLeft}>
-                <View style={styles.settingIcon}>
-                  <Globe size={20} color={theme.colors.primary} />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Language</Text>
-                  <Text style={styles.settingDescription}>English (US)</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Language</Text>
+          <LanguageSelector />
         </View>
 
         <View style={styles.section}>
@@ -233,6 +222,32 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {userData?.role === 'admin' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Admin</Text>
+
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => router.push('/admin/api-settings')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingLeft}>
+                  <View style={styles.settingIcon}>
+                    <Key size={20} color={theme.colors.primary} />
+                  </View>
+                  <View style={styles.settingInfo}>
+                    <Text style={styles.settingLabel}>AI API Settings</Text>
+                    <Text style={styles.settingDescription}>
+                      Manage OpenRouter API keys for AI reports
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Information</Text>

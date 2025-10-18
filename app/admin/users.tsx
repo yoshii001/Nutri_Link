@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getAllUsers,
   createUser,
@@ -25,6 +26,7 @@ import { X, Plus, CreditCard as Edit2, Trash2, Users, ChevronLeft } from 'lucide
 export default function AdminUsersScreen() {
   const router = useRouter();
   const { userData } = useAuth();
+  const { t } = useLanguage();
   const [users, setUsers] = useState<Record<string, User & { uid: string }>>({});
   const [schools, setSchools] = useState<Record<string, School>>({});
   const [modalVisible, setModalVisible] = useState(false);
@@ -48,7 +50,7 @@ export default function AdminUsersScreen() {
       setSchools(schoolsData);
     } catch (error) {
       console.error('Error loading users:', error);
-      Alert.alert('Error', 'Failed to load users');
+      Alert.alert(t('common.error'), 'Failed to load users');
     }
   };
 
@@ -92,12 +94,12 @@ export default function AdminUsersScreen() {
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.email) {
-      Alert.alert('Error', 'Please fill all required fields');
+      Alert.alert(t('common.error'), t('admin.fillRequired'));
       return;
     }
 
     if (!editingUser && !formData.password) {
-      Alert.alert('Error', 'Password is required for new users');
+      Alert.alert(t('common.error'), t('admin.passwordRequired'));
       return;
     }
 
@@ -108,7 +110,7 @@ export default function AdminUsersScreen() {
           role: formData.role,
           ...(formData.schoolId && { schoolId: formData.schoolId }),
         });
-        Alert.alert('Success', 'User updated successfully');
+        Alert.alert(t('common.success'), t('admin.userUpdated'));
       } else {
         await createUser(
           formData.email,
@@ -117,28 +119,28 @@ export default function AdminUsersScreen() {
           formData.role,
           formData.schoolId || undefined
         );
-        Alert.alert('Success', 'User created successfully');
+        Alert.alert(t('common.success'), t('admin.userCreated'));
       }
       handleCloseModal();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save user');
+      Alert.alert(t('common.error'), error.message || 'Failed to save user');
     }
   };
 
   const handleDelete = (uid: string, name: string) => {
-    Alert.alert('Confirm Delete', `Are you sure you want to delete ${name}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin.confirmDelete'), `${t('admin.deleteMessage')} ${name}?`, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteUser(uid);
-            Alert.alert('Success', 'User deleted successfully');
+            Alert.alert(t('common.success'), t('admin.userDeleted'));
             loadData();
           } catch (error) {
-            Alert.alert('Error', 'Failed to delete user');
+            Alert.alert(t('common.error'), 'Failed to delete user');
           }
         },
       },
@@ -159,7 +161,7 @@ export default function AdminUsersScreen() {
   if (userData?.role !== 'admin') {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Access Denied: Admin Only</Text>
+        <Text style={styles.errorText}>{t('admin.accessDenied')}</Text>
       </View>
     );
   }
@@ -171,8 +173,8 @@ export default function AdminUsersScreen() {
           <ChevronLeft color="#fff" size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>User Management</Text>
-          <Text style={styles.headerSubtitle}>{Object.keys(users).length} users</Text>
+          <Text style={styles.headerTitle}>{t('admin.userManagement')}</Text>
+          <Text style={styles.headerSubtitle}>{Object.keys(users).length} {t('admin.users')}</Text>
         </View>
         <TouchableOpacity onPress={() => handleOpenModal()} style={styles.addButton}>
           <Plus color="#fff" size={24} />
@@ -200,7 +202,7 @@ export default function AdminUsersScreen() {
               <Text style={styles.userEmail}>{user.email}</Text>
               {user.schoolId && schools[user.schoolId] && (
                 <Text style={styles.userSchool}>
-                  School: {schools[user.schoolId].name}
+                  {t('admin.school')}: {schools[user.schoolId].name}
                 </Text>
               )}
             </View>
@@ -232,7 +234,7 @@ export default function AdminUsersScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingUser ? 'Edit User' : 'Add New User'}
+                {editingUser ? t('admin.editUser') : t('admin.addNewUser')}
               </Text>
               <TouchableOpacity onPress={handleCloseModal}>
                 <X color="#666" size={24} />
@@ -240,20 +242,20 @@ export default function AdminUsersScreen() {
             </View>
 
             <ScrollView style={styles.modalForm}>
-              <Text style={styles.label}>Name *</Text>
+              <Text style={styles.label}>{t('admin.name')} *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.name}
                 onChangeText={(text) => setFormData({ ...formData, name: text })}
-                placeholder="Enter name"
+                placeholder={t('admin.name')}
               />
 
-              <Text style={styles.label}>Email *</Text>
+              <Text style={styles.label}>{t('admin.email')} *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.email}
                 onChangeText={(text) => setFormData({ ...formData, email: text })}
-                placeholder="Enter email"
+                placeholder={t('admin.email')}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 editable={!editingUser}
@@ -261,18 +263,18 @@ export default function AdminUsersScreen() {
 
               {!editingUser && (
                 <>
-                  <Text style={styles.label}>Password *</Text>
+                  <Text style={styles.label}>{t('admin.password')} *</Text>
                   <TextInput
                     style={styles.input}
                     value={formData.password}
                     onChangeText={(text) => setFormData({ ...formData, password: text })}
-                    placeholder="Enter password"
+                    placeholder={t('admin.password')}
                     secureTextEntry
                   />
                 </>
               )}
 
-              <Text style={styles.label}>Role *</Text>
+              <Text style={styles.label}>{t('admin.role')} *</Text>
               <View style={styles.roleSelector}>
                 {(['admin', 'principal', 'teacher', 'donor', 'parent'] as UserRole[]).map(
                   (role) => (
@@ -301,7 +303,7 @@ export default function AdminUsersScreen() {
                 formData.role === 'principal' ||
                 formData.role === 'parent') && (
                 <>
-                  <Text style={styles.label}>School (Optional)</Text>
+                  <Text style={styles.label}>{t('admin.schoolOptional')}</Text>
                   <View style={styles.schoolSelector}>
                     <TouchableOpacity
                       style={[
@@ -310,7 +312,7 @@ export default function AdminUsersScreen() {
                       ]}
                       onPress={() => setFormData({ ...formData, schoolId: '' })}
                     >
-                      <Text style={styles.schoolOptionText}>None</Text>
+                      <Text style={styles.schoolOptionText}>{t('admin.none')}</Text>
                     </TouchableOpacity>
                     {Object.entries(schools)
                       .filter(([_, school]) => school.status === 'approved')
@@ -343,14 +345,14 @@ export default function AdminUsersScreen() {
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={handleCloseModal}
               >
-                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                <Text style={styles.modalButtonTextCancel}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonSubmit]}
                 onPress={handleSubmit}
               >
                 <Text style={styles.modalButtonText}>
-                  {editingUser ? 'Update' : 'Create'}
+                  {editingUser ? t('admin.update') : t('admin.create')}
                 </Text>
               </TouchableOpacity>
             </View>

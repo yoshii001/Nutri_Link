@@ -1,26 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { theme } from '@/constants/theme';
-import { Users, UtensilsCrossed, ClipboardCheck, BarChart, Package, TrendingUp, AlertCircle, ArrowRight } from 'lucide-react-native';
+import { Users, UtensilsCrossed, ClipboardCheck, BarChart, Package } from 'lucide-react-native';
 import TeacherHeader from '@/components/TeacherHeader';
 import TeacherBottomNav from '@/components/TeacherBottomNav';
 import { getTeacherByUserId } from '@/services/firebase/teacherService';
 import { getClassesBySchoolId } from '@/services/firebase/classService';
 import { getMealStockByClass, MealStock } from '@/services/firebase/mealStockService';
-
-// Modern grid-inspired color palette
-const COLORS = {
-  ocean: '#0891B2',      // Cyan-600
-  mint: '#10B981',       // Emerald-500
-  coral: '#F43F5E',      // Rose-500
-  violet: '#8B5CF6',     // Violet-500
-  amber: '#F59E0B',      // Amber-500
-  sky: '#0EA5E9',        // Sky-500
-  slate: '#64748B',      // Slate-500
-  neutral: '#F8FAFC',    // Slate-50
-};
 
 export default function TeacherDashboard() {
   const router = useRouter();
@@ -67,158 +55,110 @@ export default function TeacherDashboard() {
     }
   };
 
-  const getStockStatus = () => {
-    if (totalCoverage === 0) return { text: 'No Stock', color: COLORS.coral };
-    if (totalCoverage < 20) return { text: 'Low Stock', color: COLORS.amber };
-    return { text: 'Good Stock', color: COLORS.mint };
-  };
-
-  const stockStatus = getStockStatus();
-
   return (
     <View style={styles.container}>
-      <TeacherHeader title="Teacher Dashboard" subtitle={`Welcome back, ${userData?.name || 'Teacher'}`} />
+      <TeacherHeader title="Teacher Dashboard" subtitle={`Welcome, ${userData?.name || 'Teacher'}`} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Premium Stock Summary Card */}
+        {/* Enhanced Stock Summary Card */}
         {!loading && (
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <View>
-                <Text style={styles.summaryTitle}>Meal Inventory</Text>
-                <Text style={styles.summarySubtitle}>Live stock overview</Text>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: stockStatus.color + '15' }]}>
-                <View style={[styles.statusDot, { backgroundColor: stockStatus.color }]} />
-                <Text style={[styles.statusText, { color: stockStatus.color }]}>
-                  {stockStatus.text}
-                </Text>
+              <Text style={styles.summaryTitle}>Meal Stock Overview</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Live</Text>
               </View>
             </View>
             
-            <View style={styles.statsGrid}>
-              <View style={[styles.mainStatCard, { backgroundColor: COLORS.ocean + '12' }]}>
-                <View style={[styles.statIconLarge, { backgroundColor: COLORS.ocean }]}>
-                  <Package size={24} color="#FFF" strokeWidth={2.5} />
+            <View style={styles.summaryStats}>
+              <View style={styles.statCard}>
+                <View style={styles.statIconContainer}>
+                  <Package size={24} color={theme.colors.primary} />
                 </View>
-                <View style={styles.statContent}>
-                  <Text style={[styles.statValueLarge, { color: COLORS.ocean }]}>
-                    {mealStockCount}
-                  </Text>
-                  <Text style={styles.statLabelLarge}>Meal Types</Text>
-                </View>
-                <View style={[styles.trendIndicator, { backgroundColor: COLORS.mint + '20' }]}>
-                  <TrendingUp size={18} color={COLORS.mint} strokeWidth={2.5} />
-                </View>
+                <Text style={styles.statValue}>{mealStockCount}</Text>
+                <Text style={styles.statLabel}>Total Meals</Text>
+                <View style={styles.statDivider} />
               </View>
               
-              <View style={styles.secondaryStatsRow}>
-                <View style={[styles.secondaryStatCard, { backgroundColor: COLORS.mint + '12' }]}>
-                  <View style={[styles.secondaryStatIcon, { backgroundColor: COLORS.mint }]}>
-                    <Users size={18} color="#FFF" strokeWidth={2.5} />
-                  </View>
-                  <Text style={[styles.secondaryStatValue, { color: COLORS.mint }]}>
-                    {totalCoverage}
-                  </Text>
-                  <Text style={styles.secondaryStatLabel}>Students Served</Text>
+              <View style={styles.statCard}>
+                <View style={[styles.statIconContainer, { backgroundColor: theme.colors.success + '15' }]}>
+                  <Users size={24} color={theme.colors.success} />
                 </View>
-                
-                <View style={[styles.secondaryStatCard, { backgroundColor: COLORS.amber + '12' }]}>
-                  <View style={[styles.secondaryStatIcon, { backgroundColor: COLORS.amber }]}>
-                    <AlertCircle size={18} color="#FFF" strokeWidth={2.5} />
-                  </View>
-                  <Text style={[styles.secondaryStatValue, { color: COLORS.amber }]}>
-                    {mealStockCount > 0 ? Math.round(totalCoverage / mealStockCount) : 0}
-                  </Text>
-                  <Text style={styles.secondaryStatLabel}>Avg per Meal</Text>
-                </View>
+                <Text style={[styles.statValue, { color: theme.colors.success }]}>{totalCoverage}</Text>
+                <Text style={styles.statLabel}>Can Serve</Text>
+                <View style={[styles.statDivider, { backgroundColor: theme.colors.success }]} />
               </View>
             </View>
             
-            <View style={styles.infoBox}>
-              <View style={styles.infoIcon}>
-                <Text style={styles.infoEmoji}>ℹ️</Text>
-              </View>
-              <Text style={styles.infoText}>
-                Includes approved meal plans and claimed donations
+            <View style={styles.stockInfo}>
+              <Text style={styles.stockInfoText}>
+                📦 Includes approved meal plans and claimed donations
               </Text>
             </View>
             
             <TouchableOpacity 
-              style={[styles.primaryButton, { backgroundColor: COLORS.ocean }]}
+              style={styles.viewStockButton}
               onPress={() => router.push('/teacher/meal-stock' as any)}
-              activeOpacity={0.85}
+              activeOpacity={0.8}
             >
-              <Text style={styles.primaryButtonText}>View Full Inventory</Text>
-              <ArrowRight size={18} color="#FFF" strokeWidth={2.5} />
+              <Text style={styles.viewStockButtonText}>View Full Stock</Text>
+              <Text style={styles.viewStockArrow}>→</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Quick Actions Grid */}
-        <View style={styles.actionsHeader}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <Text style={styles.sectionSubtitle}>Manage your classroom</Text>
-        </View>
-        
-        <View style={styles.actionsGrid}>
-          <View style={styles.actionRow}>
+        {/* Quick Actions Section */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.actions}>
+          <View style={styles.cardRow}>
             <TouchableOpacity 
-              style={[styles.actionCard, { backgroundColor: COLORS.sky + '12' }]} 
+              style={[styles.card, styles.cardSmall]} 
               onPress={() => router.push('/teacher/claim-meal' as any)}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
             >
-              <View style={[styles.actionIconWrapper, { backgroundColor: COLORS.sky }]}>
-                <Package size={22} color="#FFF" strokeWidth={2.5} />
+              <View style={styles.cardIconSmall}>
+                <Package size={24} color={theme.colors.primary} />
               </View>
-              <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Claim Meals</Text>
-                <Text style={styles.actionDesc}>Browse donations</Text>
-              </View>
+              <Text style={styles.cardTitle}>Claim Meals</Text>
+              <Text style={styles.cardDesc}>View and claim donations</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.actionCard, { backgroundColor: COLORS.mint + '12' }]} 
+              style={[styles.card, styles.cardSmall]} 
               onPress={() => router.push('/teacher/students' as any)}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
             >
-              <View style={[styles.actionIconWrapper, { backgroundColor: COLORS.mint }]}>
-                <Users size={22} color="#FFF" strokeWidth={2.5} />
+              <View style={styles.cardIconSmall}>
+                <Users size={24} color={theme.colors.primary} />
               </View>
-              <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Students</Text>
-                <Text style={styles.actionDesc}>Manage profiles</Text>
-              </View>
+              <Text style={styles.cardTitle}>Manage Students</Text>
+              <Text style={styles.cardDesc}>Add or view profiles</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.actionRow}>
+          <View style={styles.cardRow}>
             <TouchableOpacity 
-              style={[styles.actionCard, { backgroundColor: COLORS.coral + '12' }]} 
+              style={[styles.card, styles.cardSmall]} 
               onPress={() => router.push('/teacher/serve-meals' as any)}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
             >
-              <View style={[styles.actionIconWrapper, { backgroundColor: COLORS.coral }]}>
-                <UtensilsCrossed size={22} color="#FFF" strokeWidth={2.5} />
+              <View style={styles.cardIconSmall}>
+                <UtensilsCrossed size={24} color={theme.colors.primary} />
               </View>
-              <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Serve Meals</Text>
-                <Text style={styles.actionDesc}>Track distribution</Text>
-              </View>
+              <Text style={styles.cardTitle}>Serve Meals</Text>
+              <Text style={styles.cardDesc}>Mark meals served</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.actionCard, { backgroundColor: COLORS.violet + '12' }]} 
+              style={[styles.card, styles.cardSmall]} 
               onPress={() => router.push('/teacher/reports' as any)}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
             >
-              <View style={[styles.actionIconWrapper, { backgroundColor: COLORS.violet }]}>
-                <BarChart size={22} color="#FFF" strokeWidth={2.5} />
+              <View style={styles.cardIconSmall}>
+                <BarChart size={24} color={theme.colors.primary} />
               </View>
-              <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Reports</Text>
-                <Text style={styles.actionDesc}>View analytics</Text>
-              </View>
+              <Text style={styles.cardTitle}>Monthly Reports</Text>
+              <Text style={styles.cardDesc}>View attendance</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -234,275 +174,171 @@ export default function TeacherDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 20,
-    shadowColor: '#0891B2',
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.xl,
+    borderRadius: theme.borderRadius.xl,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    elevation: 5,
   },
   summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
   },
   summaryTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: 'Inter-Bold',
-    color: '#0F172A',
-    marginBottom: 2,
-    letterSpacing: -0.3,
+    color: theme.colors.text.primary,
   },
-  summarySubtitle: {
-    fontSize: 13,
-    fontFamily: 'Inter-Medium',
-    color: '#64748B',
+  badge: {
+    backgroundColor: theme.colors.success + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
+  badgeText: {
     fontSize: 11,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.success,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  statsGrid: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  mainStatCard: {
-    padding: 18,
-    borderRadius: 16,
+  summaryStats: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    borderWidth: 1,
-    borderColor: COLORS.ocean + '20',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
-  statIconLarge: {
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  statIconContainer: {
+    backgroundColor: theme.colors.primary + '15',
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: theme.spacing.xs,
   },
-  statContent: {
-    flex: 1,
-  },
-  statValueLarge: {
+  statValue: {
     fontSize: 32,
     fontFamily: 'Inter-Bold',
-    letterSpacing: -1,
-    lineHeight: 36,
-  },
-  statLabelLarge: {
-    fontSize: 13,
-    color: '#64748B',
-    fontFamily: 'Inter-SemiBold',
-    marginTop: 2,
-  },
-  trendIndicator: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  secondaryStatsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  secondaryStatCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  secondaryStatIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  secondaryStatValue: {
-    fontSize: 26,
-    fontFamily: 'Inter-Bold',
+    color: theme.colors.primary,
     letterSpacing: -0.5,
-    marginBottom: 2,
   },
-  secondaryStatLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    fontFamily: 'Inter-SemiBold',
-    textAlign: 'center',
-  },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  infoIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoEmoji: {
-    fontSize: 14,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#64748B',
+  statLabel: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
     fontFamily: 'Inter-Medium',
-    lineHeight: 16,
   },
-  primaryButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+  statDivider: {
+    width: 30,
+    height: 3,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 2,
+    marginTop: theme.spacing.xs,
+  },
+  stockInfo: {
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
+  },
+  stockInfoText: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  viewStockButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    shadowColor: COLORS.ocean,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    gap: theme.spacing.xs,
   },
-  primaryButtonText: {
-    color: '#FFFFFF',
+  viewStockButtonText: {
+    color: theme.colors.surface,
     fontSize: 15,
-    fontFamily: 'Inter-Bold',
-    letterSpacing: 0.2,
+    fontFamily: 'Inter-SemiBold',
   },
-  actionsHeader: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 12,
+  viewStockArrow: {
+    color: theme.colors.surface,
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: '#0F172A',
-    marginBottom: 2,
-    letterSpacing: -0.3,
+    color: theme.colors.text.primary,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
-  sectionSubtitle: {
-    fontSize: 13,
-    fontFamily: 'Inter-Medium',
-    color: '#64748B',
+  actions: {
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
-  actionsGrid: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+  card: {
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.xl,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
   },
-  actionIconWrapper: {
+  cardRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  cardSmall: {
+    flex: 1,
+    padding: theme.spacing.lg,
+  },
+  cardIconSmall: {
+    backgroundColor: theme.colors.primary + '15',
     width: 44,
     height: 44,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: theme.spacing.sm,
   },
-  actionContent: {
-    flex: 1,
-    marginLeft: 14,
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
   },
-  actionTitle: {
-    fontSize: 15,
-    fontFamily: 'Inter-Bold',
-    color: '#0F172A',
-    marginBottom: 2,
-    letterSpacing: -0.2,
-  },
-  actionDesc: {
-    fontSize: 12,
-    color: '#64748B',
-    fontFamily: 'Inter-Medium',
-  },
-  actionArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+  cardDesc: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    lineHeight: 18,
+    fontFamily: 'Inter-Regular',
   },
   bottomSpacing: {
-    height: 24,
+    height: 20,
   },
 });

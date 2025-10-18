@@ -233,7 +233,7 @@ export function generateReportHTML(
     </div>
     <div class="stat-card">
       <div class="stat-label">Donations Received</div>
-      <div class="stat-value">Rs.${report.donationsReceived.toLocaleString()}</div>
+      <div class="stat-value">$${report.donationsReceived.toLocaleString()}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Shortages</div>

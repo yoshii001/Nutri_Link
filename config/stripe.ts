@@ -4,7 +4,7 @@ export const STRIPE_CONFIG = {
   currency: 'usd',
   testMode: true,
   // secretKey must NOT be used in client code. Use the server at BACKEND_URL to create PaymentIntents.
-  BACKEND_URL: process.env.EXPO_PUBLIC_STRIPE_BACKEND_URL || 'https://nutri-link-p2ngqpid1-janitha-gamages-projects.vercel.app'
+  BACKEND_URL: 'http://localhost:4242'
 };
 
 // Note: In production, never expose secret keys in frontend code
