@@ -10,17 +10,20 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getSystemStats } from '@/services/firebase/adminService';
 import { getAllMealTracking } from '@/services/firebase/mealTrackingService';
 import { getAllDonations } from '@/services/firebase/donationService';
 import { getPendingSchools } from '@/services/firebase/schoolService';
 import { getActiveDonationRequests } from '@/services/firebase/donationRequestService';
-import { Users, School, DollarSign, TrendingUp, CircleAlert as AlertCircle, FileText, Settings, Building2 } from 'lucide-react-native';
+import { Users, School, DollarSign, TrendingUp, CircleAlert as AlertCircle, FileText, Settings, Building2, Key } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
+import LanguageSelector from '@/components/LanguageSelector';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const { userData } = useAuth();
+  const { t } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -95,7 +98,7 @@ export default function AdminDashboardScreen() {
   if (userData?.role !== 'admin') {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Access Denied: Admin Only</Text>
+        <Text style={styles.errorText}>{t('admin.accessDenied')}</Text>
       </View>
     );
   }
@@ -117,11 +120,15 @@ export default function AdminDashboardScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <Text style={styles.greeting}>Admin Dashboard</Text>
+        <Text style={styles.greeting}>{t('admin.dashboard')}</Text>
         <View style={styles.roleBadge}>
-          <Text style={styles.role}>SYSTEM MANAGEMENT</Text>
+          <Text style={styles.role}>{t('admin.systemManagement')}</Text>
         </View>
       </LinearGradient>
+
+      <View style={styles.languageSelectorContainer}>
+        <LanguageSelector />
+      </View>
 
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
@@ -135,7 +142,7 @@ export default function AdminDashboardScreen() {
               <TrendingUp color={theme.colors.surface} size={28} strokeWidth={2.5} />
             </View>
             <Text style={styles.statValue}>{stats.todayMeals}</Text>
-            <Text style={styles.statLabel}>Today's Meals</Text>
+            <Text style={styles.statLabel}>{t('admin.todayMeals')}</Text>
           </LinearGradient>
         </View>
 
@@ -150,7 +157,7 @@ export default function AdminDashboardScreen() {
               <Users color={theme.colors.surface} size={28} strokeWidth={2.5} />
             </View>
             <Text style={styles.statValue}>{stats.totalMealsServed}</Text>
-            <Text style={styles.statLabel}>Total Meals Served</Text>
+            <Text style={styles.statLabel}>{t('admin.totalMealsServed')}</Text>
           </LinearGradient>
         </View>
 
@@ -165,7 +172,7 @@ export default function AdminDashboardScreen() {
               <DollarSign color={theme.colors.surface} size={28} strokeWidth={2.5} />
             </View>
             <Text style={styles.statValue}>${stats.totalDonations}</Text>
-            <Text style={styles.statLabel}>Total Donations</Text>
+            <Text style={styles.statLabel}>{t('admin.totalDonations')}</Text>
           </LinearGradient>
         </View>
 
@@ -180,55 +187,55 @@ export default function AdminDashboardScreen() {
               <AlertCircle color={theme.colors.surface} size={28} strokeWidth={2.5} />
             </View>
             <Text style={styles.statValue}>{stats.pendingRequests}</Text>
-            <Text style={styles.statLabel}>Pending Requests</Text>
+            <Text style={styles.statLabel}>{t('admin.pendingRequests')}</Text>
           </LinearGradient>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>System Statistics</Text>
+        <Text style={styles.sectionTitle}>{t('admin.systemStatistics')}</Text>
         <View style={styles.infoRow}>
           <Users color="#666" size={20} />
-          <Text style={styles.infoText}>Total Users: {stats.totalUsers}</Text>
+          <Text style={styles.infoText}>{t('admin.totalUsers')}: {stats.totalUsers}</Text>
         </View>
         <View style={styles.infoRow}>
           <Building2 color="#666" size={20} />
-          <Text style={styles.infoText}>Total Schools: {stats.totalSchools}</Text>
+          <Text style={styles.infoText}>{t('admin.totalSchools')}: {stats.totalSchools}</Text>
         </View>
         <View style={styles.infoRow}>
           <AlertCircle color="#FF9800" size={20} />
-          <Text style={styles.infoText}>Pending School Approvals: {stats.pendingSchools}</Text>
+          <Text style={styles.infoText}>{t('admin.pendingSchoolApprovals')}: {stats.pendingSchools}</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Users by Role</Text>
+        <Text style={styles.sectionTitle}>{t('admin.usersByRole')}</Text>
         <View style={styles.roleGrid}>
           <View style={styles.roleCard}>
             <Text style={styles.roleValue}>{stats.usersByRole.admin}</Text>
-            <Text style={styles.roleLabel}>Admins</Text>
+            <Text style={styles.roleLabel}>{t('admin.admins')}</Text>
           </View>
           <View style={styles.roleCard}>
             <Text style={styles.roleValue}>{stats.usersByRole.principal}</Text>
-            <Text style={styles.roleLabel}>Principals</Text>
+            <Text style={styles.roleLabel}>{t('admin.principals')}</Text>
           </View>
           <View style={styles.roleCard}>
             <Text style={styles.roleValue}>{stats.usersByRole.teacher}</Text>
-            <Text style={styles.roleLabel}>Teachers</Text>
+            <Text style={styles.roleLabel}>{t('admin.teachers')}</Text>
           </View>
           <View style={styles.roleCard}>
             <Text style={styles.roleValue}>{stats.usersByRole.donor}</Text>
-            <Text style={styles.roleLabel}>Donors</Text>
+            <Text style={styles.roleLabel}>{t('admin.donors')}</Text>
           </View>
           <View style={styles.roleCard}>
             <Text style={styles.roleValue}>{stats.usersByRole.parent}</Text>
-            <Text style={styles.roleLabel}>Parents</Text>
+            <Text style={styles.roleLabel}>{t('admin.parents')}</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t('admin.quickActions')}</Text>
 
         <TouchableOpacity
           style={styles.actionButton}
@@ -243,8 +250,8 @@ export default function AdminDashboardScreen() {
           >
             <Users color={theme.colors.surface} size={24} />
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>User Management</Text>
-              <Text style={styles.actionSubtitle}>Add, edit, and manage users</Text>
+              <Text style={styles.actionTitle}>{t('admin.userManagement')}</Text>
+              <Text style={styles.actionSubtitle}>{t('admin.userManagementDesc')}</Text>
             </View>
           </LinearGradient>
         </TouchableOpacity>
@@ -262,9 +269,9 @@ export default function AdminDashboardScreen() {
           >
             <School color={theme.colors.surface} size={24} />
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>School Management</Text>
+              <Text style={styles.actionTitle}>{t('admin.schoolManagement')}</Text>
               <Text style={styles.actionSubtitle}>
-                Approve schools ({stats.pendingSchools} pending)
+                {t('admin.schoolManagementDesc')} ({stats.pendingSchools} {t('admin.pending').toLowerCase()})
               </Text>
             </View>
           </LinearGradient>
@@ -283,8 +290,8 @@ export default function AdminDashboardScreen() {
           >
             <DollarSign color={theme.colors.surface} size={24} />
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Donation Management</Text>
-              <Text style={styles.actionSubtitle}>Track and manage donations</Text>
+              <Text style={styles.actionTitle}>{t('admin.donationManagement')}</Text>
+              <Text style={styles.actionSubtitle}>{t('admin.donationManagementDesc')}</Text>
             </View>
           </LinearGradient>
         </TouchableOpacity>
@@ -302,8 +309,27 @@ export default function AdminDashboardScreen() {
           >
             <FileText color={theme.colors.surface} size={24} />
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Reports & Analytics</Text>
-              <Text style={styles.actionSubtitle}>Generate comprehensive reports</Text>
+              <Text style={styles.actionTitle}>{t('admin.reportsAnalytics')}</Text>
+              <Text style={styles.actionSubtitle}>{t('admin.reportsAnalyticsDesc')}</Text>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push('/admin/api-settings')}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={[theme.colors.primary, theme.colors.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.actionButtonGradient}
+          >
+            <Key color={theme.colors.surface} size={24} />
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>AI API Settings</Text>
+              <Text style={styles.actionSubtitle}>Manage OpenRouter API keys for AI reports</Text>
             </View>
           </LinearGradient>
         </TouchableOpacity>
@@ -321,6 +347,10 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: theme.spacing.xl,
     paddingHorizontal: theme.spacing.xl,
+  },
+  languageSelectorContainer: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
   },
   greeting: {
     fontSize: 28,

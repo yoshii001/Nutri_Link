@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getAllDonations } from '@/services/firebase/donationService';
 import { getAllDonationRequests } from '@/services/firebase/donationRequestService';
 import { getAllSchools } from '@/services/firebase/schoolService';
@@ -19,6 +20,7 @@ import { ChevronLeft, DollarSign, TrendingUp, CircleAlert as AlertCircle, Circle
 export default function AdminDonationsScreen() {
   const router = useRouter();
   const { userData } = useAuth();
+  const { t } = useLanguage();
   const [donations, setDonations] = useState<Record<string, Donation>>({});
   const [requests, setRequests] = useState<Record<string, DonationRequest>>({});
   const [schools, setSchools] = useState<Record<string, School>>({});
@@ -75,7 +77,7 @@ export default function AdminDonationsScreen() {
   if (userData?.role !== 'admin') {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Access Denied: Admin Only</Text>
+        <Text style={styles.errorText}>{t('admin.accessDenied')}</Text>
       </View>
     );
   }
@@ -87,7 +89,7 @@ export default function AdminDonationsScreen() {
           <ChevronLeft color="#fff" size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Donation Management</Text>
+          <Text style={styles.headerTitle}>{t('admin.donationManagement')}</Text>
           <Text style={styles.headerSubtitle}>
             ${stats.totalDonations.toLocaleString()} raised
           </Text>
@@ -98,17 +100,17 @@ export default function AdminDonationsScreen() {
         <View style={styles.statItem}>
           <DollarSign color="#4CAF50" size={24} />
           <Text style={styles.statValue}>${stats.totalDonations}</Text>
-          <Text style={styles.statLabel}>Total Raised</Text>
+          <Text style={styles.statLabel}>{t('admin.totalRaised')}</Text>
         </View>
         <View style={styles.statItem}>
           <TrendingUp color="#2196F3" size={24} />
           <Text style={styles.statValue}>{stats.totalMealContributions}</Text>
-          <Text style={styles.statLabel}>Meals Funded</Text>
+          <Text style={styles.statLabel}>{t('admin.mealsFunded')}</Text>
         </View>
         <View style={styles.statItem}>
           <AlertCircle color="#FF9800" size={24} />
           <Text style={styles.statValue}>{stats.activeRequests}</Text>
-          <Text style={styles.statLabel}>Active Requests</Text>
+          <Text style={styles.statLabel}>{t('admin.activeRequests')}</Text>
         </View>
       </View>
 
@@ -120,7 +122,7 @@ export default function AdminDonationsScreen() {
           <Text
             style={[styles.tabText, activeTab === 'donations' && styles.tabTextActive]}
           >
-            Donations ({Object.keys(donations).length})
+            {t('admin.donations')} ({Object.keys(donations).length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -130,7 +132,7 @@ export default function AdminDonationsScreen() {
           <Text
             style={[styles.tabText, activeTab === 'requests' && styles.tabTextActive]}
           >
-            Requests ({Object.keys(requests).length})
+            {t('admin.requests')} ({Object.keys(requests).length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -144,7 +146,7 @@ export default function AdminDonationsScreen() {
             {Object.entries(donations).length === 0 ? (
               <View style={styles.emptyState}>
                 <DollarSign color="#ccc" size={64} />
-                <Text style={styles.emptyText}>No donations yet</Text>
+                <Text style={styles.emptyText}>{t('admin.noDonations')}</Text>
               </View>
             ) : (
               Object.entries(donations)
@@ -180,20 +182,20 @@ export default function AdminDonationsScreen() {
 
                     <View style={styles.cardDetails}>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Donor:</Text>
+                        <Text style={styles.detailLabel}>{t('admin.donor')}:</Text>
                         <Text style={styles.detailText}>
                           {users[donation.donorId]?.name || 'Unknown'}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Email:</Text>
+                        <Text style={styles.detailLabel}>{t('admin.email')}:</Text>
                         <Text style={styles.detailText}>
                           {users[donation.donorId]?.email || donation.donorEmail || 'N/A'}
                         </Text>
                       </View>
                       {donation.schoolId && schools[donation.schoolId] && (
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>School:</Text>
+                          <Text style={styles.detailLabel}>{t('admin.school')}:</Text>
                           <Text style={styles.detailText}>
                             {schools[donation.schoolId].name}
                           </Text>
@@ -207,7 +209,7 @@ export default function AdminDonationsScreen() {
                       </View>
                       {donation.donorMessage && (
                         <View style={styles.messageBox}>
-                          <Text style={styles.messageLabel}>Message:</Text>
+                          <Text style={styles.messageLabel}>{t('admin.message')}:</Text>
                           <Text style={styles.messageText}>{donation.donorMessage}</Text>
                         </View>
                       )}
@@ -221,7 +223,7 @@ export default function AdminDonationsScreen() {
             {Object.entries(requests).length === 0 ? (
               <View style={styles.emptyState}>
                 <AlertCircle color="#ccc" size={64} />
-                <Text style={styles.emptyText}>No donation requests</Text>
+                <Text style={styles.emptyText}>{t('admin.noDonationRequests')}</Text>
               </View>
             ) : (
               Object.entries(requests)
@@ -268,15 +270,15 @@ export default function AdminDonationsScreen() {
 
                     <View style={styles.cardDetails}>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Principal:</Text>
+                        <Text style={styles.detailLabel}>{t('admin.principal')}:</Text>
                         <Text style={styles.detailText}>{request.principalName}</Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Purpose:</Text>
+                        <Text style={styles.detailLabel}>{t('admin.purpose')}:</Text>
                         <Text style={styles.detailText}>{request.purpose}</Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Target Date:</Text>
+                        <Text style={styles.detailLabel}>{t('admin.targetDate')}:</Text>
                         <Text style={styles.detailText}>
                           {new Date(request.targetDate).toLocaleDateString()}
                         </Text>
@@ -304,7 +306,7 @@ export default function AdminDonationsScreen() {
                       </View>
                       {request.description && (
                         <View style={styles.messageBox}>
-                          <Text style={styles.messageLabel}>Description:</Text>
+                          <Text style={styles.messageLabel}>{t('admin.description')}:</Text>
                           <Text style={styles.messageText}>{request.description}</Text>
                         </View>
                       )}

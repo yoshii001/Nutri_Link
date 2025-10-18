@@ -9,6 +9,7 @@ export interface MealStock {
   claimedAt: string;
   claimedBy: string;
   donorName: string;
+  donorId?: string;
   description?: string;
 }
 

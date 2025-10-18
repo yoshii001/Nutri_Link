@@ -8,11 +8,13 @@ import { getAllSchools } from '@/services/firebase/schoolService';
 import { Report } from '@/types';
 import { FileText, TrendingUp, DollarSign, MessageSquare, Users, Calendar, Download, Sparkles, X, Share2, Save } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { generateAIReport } from '@/services/aiReportService';
 import { generateReportHTML, generateAndDownloadPDF, generateAndSharePDF } from '@/utils/pdfGenerator';
 
 export default function ReportsScreen() {
   const { userData } = useAuth();
+  const { t } = useLanguage();
   const [reports, setReports] = useState<Record<string, Report>>({});
   const [liveStats, setLiveStats] = useState({
     totalMeals: 0,
@@ -37,8 +39,8 @@ export default function ReportsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Access Denied</Text>
-          <Text style={styles.errorSubtext}>You don't have permission to view this page.</Text>
+          <Text style={styles.errorText}>{t('reports.accessDeniedReports')}</Text>
+          <Text style={styles.errorSubtext}>{t('reports.noPermission')}</Text>
         </View>
       </View>
     );
@@ -135,7 +137,7 @@ export default function ReportsScreen() {
       setShowShareModal(true);
     } catch (error) {
       console.error('Error generating report:', error);
-      Alert.alert('Error', 'Failed to generate report. Please try again.');
+      Alert.alert(t('common.error'), t('reports.failedGenerate'));
     } finally {
       setGenerating(false);
     }
@@ -158,7 +160,7 @@ export default function ReportsScreen() {
       setGeneratedReportData(null);
     } catch (error) {
       console.error('Error sharing report:', error);
-      Alert.alert('Error', 'Failed to share report. Please try again.');
+      Alert.alert(t('common.error'), t('reports.failedShare'));
     }
   };
 
@@ -179,7 +181,7 @@ export default function ReportsScreen() {
       setGeneratedReportData(null);
     } catch (error) {
       console.error('Error downloading report:', error);
-      Alert.alert('Error', 'Failed to download report. Please try again.');
+      Alert.alert(t('common.error'), t('reports.failedDownload'));
     }
   };
 
@@ -189,7 +191,7 @@ export default function ReportsScreen() {
       await generateAndDownloadPDF(html, `KidsFeed_Report_${reportId}`);
     } catch (error) {
       console.error('Error downloading report:', error);
-      Alert.alert('Error', 'Failed to download report. Please try again.');
+      Alert.alert(t('common.error'), t('reports.failedDownload'));
     }
   };
 
@@ -199,7 +201,7 @@ export default function ReportsScreen() {
       await generateAndSharePDF(html, `KidsFeed_Report_${reportId}`);
     } catch (error) {
       console.error('Error sharing report:', error);
-      Alert.alert('Error', 'Failed to share report. Please try again.');
+      Alert.alert(t('common.error'), t('reports.failedShare'));
     }
   };
 
@@ -211,7 +213,7 @@ export default function ReportsScreen() {
 
       <View style={styles.content}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Generated Reports</Text>
+          <Text style={styles.sectionTitle}>{t('reports.generatedReports')}</Text>
           <View style={styles.headerButtons}>
             <TouchableOpacity
               style={styles.generateButton}
@@ -223,7 +225,7 @@ export default function ReportsScreen() {
               ) : (
                 <>
                   <Sparkles color="#fff" size={18} />
-                  <Text style={styles.generateButtonText}>Generate with AI</Text>
+                  <Text style={styles.generateButtonText}>{t('reports.generateWithAI')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -240,10 +242,10 @@ export default function ReportsScreen() {
                 <FileText color="#007AFF" size={24} />
                 <View style={styles.headerText}>
                   <View style={styles.reportTitleRow}>
-                    <Text style={styles.reportId}>Report #{id.slice(-8)}</Text>
+                    <Text style={styles.reportId}>{t('reports.report')} #{id.slice(-8)}</Text>
                     <View style={styles.aiBadge}>
                       <Sparkles color="#007AFF" size={12} />
-                      <Text style={styles.aiBadgeText}>AI Generated</Text>
+                      <Text style={styles.aiBadgeText}>{t('reports.aiGenerated')}</Text>
                     </View>
                   </View>
                   <View style={styles.dateRow}>
@@ -259,23 +261,23 @@ export default function ReportsScreen() {
                 <View style={styles.statItem}>
                   <TrendingUp color="#4CAF50" size={20} />
                   <Text style={styles.statValue}>{report.mealsServed}</Text>
-                  <Text style={styles.statLabel}>Meals Served</Text>
+                  <Text style={styles.statLabel}>{t('reports.mealsServed')}</Text>
                 </View>
 
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{report.shortages}</Text>
-                  <Text style={styles.statLabel}>Shortages</Text>
+                  <Text style={styles.statLabel}>{t('reports.shortages')}</Text>
                 </View>
 
                 <View style={styles.statItem}>
                   <DollarSign color="#4CAF50" size={20} />
                   <Text style={styles.statValue}>${report.donationsReceived}</Text>
-                  <Text style={styles.statLabel}>Donations</Text>
+                  <Text style={styles.statLabel}>{t('admin.donations')}</Text>
                 </View>
               </View>
 
               <View style={styles.summarySection}>
-                <Text style={styles.summaryTitle}>Feedback Summary</Text>
+                <Text style={styles.summaryTitle}>{t('reports.feedbackSummary')}</Text>
                 <Text style={styles.summaryText}>{report.feedbackSummary}</Text>
               </View>
 
@@ -285,14 +287,14 @@ export default function ReportsScreen() {
                   onPress={() => handleDownloadExistingReport(id, report)}
                 >
                   <Download color="#007AFF" size={18} />
-                  <Text style={styles.actionButtonText}>Download PDF</Text>
+                  <Text style={styles.actionButtonText}>{t('reports.downloadPDF')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => handleShareExistingReport(id, report)}
                 >
                   <Share2 color="#4CAF50" size={18} />
-                  <Text style={styles.actionButtonText}>Share</Text>
+                  <Text style={styles.actionButtonText}>{t('reports.share')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -301,8 +303,8 @@ export default function ReportsScreen() {
         {Object.keys(reports).length === 0 && (
           <View style={styles.emptyState}>
             <FileText color="#ccc" size={64} />
-            <Text style={styles.emptyText}>No reports generated yet</Text>
-            <Text style={styles.emptySubtext}>Use AI to generate your first report</Text>
+            <Text style={styles.emptyText}>{t('reports.noReports')}</Text>
+            <Text style={styles.emptySubtext}>{t('reports.useAIPrompt')}</Text>
           </View>
         )}
       </View>
@@ -318,7 +320,7 @@ export default function ReportsScreen() {
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleContainer}>
                 <Sparkles color="#007AFF" size={24} />
-                <Text style={styles.modalTitle}>Generate AI Report</Text>
+                <Text style={styles.modalTitle}>{t('reports.generateAIReport')}</Text>
               </View>
               <TouchableOpacity onPress={() => setShowGenerateModal(false)}>
                 <X color="#666" size={24} />
@@ -326,11 +328,11 @@ export default function ReportsScreen() {
             </View>
 
             <Text style={styles.modalDescription}>
-              Create a comprehensive report with AI-powered insights analyzing meals, donations, and feedback.
+              {t('reports.reportSuccess')}
             </Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Report Period (Days)</Text>
+              <Text style={styles.inputLabel}>{t('reports.reportPeriod')}</Text>
               <TextInput
                 style={styles.input}
                 value={reportPeriodDays}
@@ -339,7 +341,7 @@ export default function ReportsScreen() {
                 placeholder="30"
               />
               <Text style={styles.inputHint}>
-                Data from the last {reportPeriodDays || '30'} days will be analyzed
+                {t('reports.dataAnalyzed')} {reportPeriodDays || '30'} {t('reports.daysAnalyzed')}
               </Text>
             </View>
 
@@ -348,14 +350,14 @@ export default function ReportsScreen() {
                 style={styles.cancelButton}
                 onPress={() => setShowGenerateModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={handleGenerateReport}
               >
                 <Sparkles color="#fff" size={18} />
-                <Text style={styles.confirmButtonText}>Generate Report</Text>
+                <Text style={styles.confirmButtonText}>{t('reports.generateReport')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -373,7 +375,7 @@ export default function ReportsScreen() {
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleContainer}>
                 <Sparkles color="#4CAF50" size={24} />
-                <Text style={styles.modalTitle}>Report Generated!</Text>
+                <Text style={styles.modalTitle}>{t('reports.reportGenerated')}</Text>
               </View>
               <TouchableOpacity onPress={() => {
                 setShowShareModal(false);
@@ -395,9 +397,9 @@ export default function ReportsScreen() {
                 <View style={styles.shareOptionIcon}>
                   <Share2 color="#007AFF" size={28} />
                 </View>
-                <Text style={styles.shareOptionTitle}>Share Report</Text>
+                <Text style={styles.shareOptionTitle}>{t('reports.shareReport')}</Text>
                 <Text style={styles.shareOptionSubtitle}>
-                  {Platform.OS === 'web' ? 'Print/Save as PDF' : 'Share PDF via apps'}
+                  {Platform.OS === 'web' ? t('reports.printSavePDF') : t('reports.shareViaPDF')}
                 </Text>
               </TouchableOpacity>
 
@@ -409,10 +411,10 @@ export default function ReportsScreen() {
                   <Save color="#4CAF50" size={28} />
                 </View>
                 <Text style={styles.shareOptionTitle}>
-                  {Platform.OS === 'web' ? 'Download PDF' : 'Save & Share PDF'}
+                  {Platform.OS === 'web' ? t('reports.downloadPDF') : t('reports.savePDF')}
                 </Text>
                 <Text style={styles.shareOptionSubtitle}>
-                  {Platform.OS === 'web' ? 'Save as PDF file' : 'Open share dialog with PDF'}
+                  {Platform.OS === 'web' ? t('reports.printSavePDF') : t('reports.shareViaPDF')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -424,7 +426,7 @@ export default function ReportsScreen() {
                 setGeneratedReportData(null);
               }}
             >
-              <Text style={styles.closeLaterButtonText}>Close</Text>
+              <Text style={styles.closeLaterButtonText}>{t('reports.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

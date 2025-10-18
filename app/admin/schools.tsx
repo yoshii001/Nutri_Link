@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getAllSchools,
   approveSchool,
@@ -22,6 +23,7 @@ import { ChevronLeft, Check, X, Building2, MapPin, Phone, Mail } from 'lucide-re
 export default function AdminSchoolsScreen() {
   const router = useRouter();
   const { userData, user } = useAuth();
+  const { t } = useLanguage();
   const [schools, setSchools] = useState<Record<string, School>>({});
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -32,7 +34,7 @@ export default function AdminSchoolsScreen() {
       setSchools(schoolsData);
     } catch (error) {
       console.error('Error loading schools:', error);
-      Alert.alert('Error', 'Failed to load schools');
+      Alert.alert(t('common.error'), 'Failed to load schools');
     }
   };
 
@@ -47,17 +49,17 @@ export default function AdminSchoolsScreen() {
   };
 
   const handleApprove = (schoolId: string, schoolName: string) => {
-    Alert.alert('Confirm Approval', `Approve ${schoolName}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin.confirmApproval'), `${t('admin.approveSchool')} ${schoolName}?`, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Approve',
+        text: t('admin.approveSchool'),
         onPress: async () => {
           try {
             await approveSchool(schoolId, user?.uid || '');
-            Alert.alert('Success', 'School approved successfully');
+            Alert.alert(t('common.success'), t('admin.schoolApproved'));
             loadSchools();
           } catch (error) {
-            Alert.alert('Error', 'Failed to approve school');
+            Alert.alert(t('common.error'), t('admin.failedToApprove'));
           }
         },
       },
@@ -65,18 +67,18 @@ export default function AdminSchoolsScreen() {
   };
 
   const handleReject = (schoolId: string, schoolName: string) => {
-    Alert.alert('Confirm Rejection', `Reject ${schoolName}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('admin.confirmRejection'), `${t('admin.rejectSchool')} ${schoolName}?`, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Reject',
+        text: t('admin.rejectSchool'),
         style: 'destructive',
         onPress: async () => {
           try {
             await rejectSchool(schoolId, user?.uid || '');
-            Alert.alert('Success', 'School rejected');
+            Alert.alert(t('common.success'), t('admin.schoolRejected'));
             loadSchools();
           } catch (error) {
-            Alert.alert('Error', 'Failed to reject school');
+            Alert.alert(t('common.error'), t('admin.failedToReject'));
           }
         },
       },
@@ -107,7 +109,7 @@ export default function AdminSchoolsScreen() {
   if (userData?.role !== 'admin') {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Access Denied: Admin Only</Text>
+        <Text style={styles.errorText}>{t('admin.accessDenied')}</Text>
       </View>
     );
   }
@@ -119,23 +121,23 @@ export default function AdminSchoolsScreen() {
           <ChevronLeft color="#fff" size={24} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>School Management</Text>
-          <Text style={styles.headerSubtitle}>{stats.total} schools</Text>
+          <Text style={styles.headerTitle}>{t('admin.schoolManagement')}</Text>
+          <Text style={styles.headerSubtitle}>{stats.total} {t('admin.schools')}</Text>
         </View>
       </View>
 
       <View style={styles.statsBar}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{stats.pending}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={styles.statLabel}>{t('admin.pending')}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{stats.approved}</Text>
-          <Text style={styles.statLabel}>Approved</Text>
+          <Text style={styles.statLabel}>{t('admin.approved')}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{stats.rejected}</Text>
-          <Text style={styles.statLabel}>Rejected</Text>
+          <Text style={styles.statLabel}>{t('admin.rejected')}</Text>
         </View>
       </View>
 
@@ -167,7 +169,7 @@ export default function AdminSchoolsScreen() {
         {filteredSchools.length === 0 ? (
           <View style={styles.emptyState}>
             <Building2 color="#ccc" size={64} />
-            <Text style={styles.emptyText}>No schools found</Text>
+            <Text style={styles.emptyText}>{t('admin.noSchools')}</Text>
           </View>
         ) : (
           filteredSchools.map(([id, school]) => (
@@ -207,11 +209,11 @@ export default function AdminSchoolsScreen() {
                   <Text style={styles.detailText}>{school.contactPhone}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Principal:</Text>
+                  <Text style={styles.detailLabel}>{t('admin.principal')}:</Text>
                   <Text style={styles.detailText}>{school.principalName}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Submitted:</Text>
+                  <Text style={styles.detailLabel}>{t('admin.submitted')}:</Text>
                   <Text style={styles.detailText}>
                     {new Date(school.createdAt).toLocaleDateString()}
                   </Text>
@@ -219,7 +221,7 @@ export default function AdminSchoolsScreen() {
                 {school.approvedAt && (
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>
-                      {school.status === 'approved' ? 'Approved:' : 'Rejected:'}
+                      {school.status === 'approved' ? `${t('admin.approved')}:` : `${t('admin.rejected')}:`}
                     </Text>
                     <Text style={styles.detailText}>
                       {new Date(school.approvedAt).toLocaleDateString()}
@@ -235,14 +237,14 @@ export default function AdminSchoolsScreen() {
                     onPress={() => handleApprove(id, school.name)}
                   >
                     <Check color="#fff" size={20} />
-                    <Text style={styles.actionButtonText}>Approve</Text>
+                    <Text style={styles.actionButtonText}>{t('admin.approveSchool')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionButton, styles.rejectButton]}
                     onPress={() => handleReject(id, school.name)}
                   >
                     <X color="#fff" size={20} />
-                    <Text style={styles.actionButtonText}>Reject</Text>
+                    <Text style={styles.actionButtonText}>{t('admin.rejectSchool')}</Text>
                   </TouchableOpacity>
                 </View>
               )}

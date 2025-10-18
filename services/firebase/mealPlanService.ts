@@ -110,11 +110,12 @@ export const approveMealPlan = async (planId: string): Promise<void> => {
         await addMealToClassStock(mealPlan.schoolId, classId, mealId, {
           mealName: meal.mealName,
           quantity: meal.quantity,
-          coverage: classInfo.numberOfStudents, // Coverage based on class size
+          coverage: classInfo.numberOfStudents,
           unit: 'servings',
           claimedAt: new Date().toISOString(),
           claimedBy: 'Auto-approved Meal Plan',
           donorName: 'School Meal Plan',
+          donorId: undefined,
           description: `From approved meal plan: ${meal.ingredients.join(', ')}`,
         });
       }
