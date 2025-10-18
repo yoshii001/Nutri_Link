@@ -271,7 +271,7 @@ export const getScheduledMeals = async (schoolId: string, classId: string): Prom
   } catch (error) {
     const foundSchoolId = await findSchoolIdByClassId(classId);
     if (foundSchoolId) {
-      return foundSchoolId;
+      console.warn('[Parent] Fallback schoolId found for classId:', classId, foundSchoolId);
     }
 
     console.error('Error getting scheduled meals:', error);

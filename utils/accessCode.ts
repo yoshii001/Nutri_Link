@@ -1,6 +1,7 @@
 export const generateAccessCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   const letters = Array.from({ length: 7 }, () =>
-    String.fromCharCode(65 + Math.floor(Math.random() * 26))
+    chars.charAt(Math.floor(Math.random() * chars.length))
   ).join('');
 
   const symbols = ['$', '@', '#', '*'];
@@ -15,7 +16,7 @@ export const validateAccessCode = (code: string): boolean => {
   if (code.length === 8) {
     const letterPart = code.substring(0, 7);
     const symbolPart = code.substring(7, 8);
-    const hasValidLetters = /^[A-Z]{7}$/.test(letterPart);
+    const hasValidLetters = /^[A-Za-z]{7}$/.test(letterPart);
     const hasValidSymbol = /^[$@#*]$/.test(symbolPart);
     return hasValidLetters && hasValidSymbol;
   }

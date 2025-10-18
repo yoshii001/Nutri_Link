@@ -16,9 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     // Expose the Firebase config as public runtime env vars for the app.
     // Use EXPO_PUBLIC_* prefix so Expo will include them in the JS bundle.
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
+    runtimeVersion: '1.0.0',
     owner: config.owner,
   } as ExpoConfig;
 

@@ -38,19 +38,18 @@ export default function ParentLoginScreen() {
     try {
       const session = await loginWithAccessCode(accessCode);
 
-      if (!session) {
+      if (session) {
+        router.replace('/parent/portal');
+      } else {
+        setLoading(false);
         if (Platform.OS === 'web') {
           alert('Login failed. Please try again.');
         } else {
           Alert.alert('Error', 'Login failed. Please try again.');
         }
-        setLoading(false);
-        return;
       }
-
-      router.replace('/parent/portal');
     } catch (error: any) {
-      console.error('Error during parent login:', error);
+      setLoading(false);
       const errorMessage = error?.message || 'Login failed. Please try again.';
 
       if (Platform.OS === 'web') {
@@ -58,8 +57,6 @@ export default function ParentLoginScreen() {
       } else {
         Alert.alert('Error', errorMessage);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -107,14 +104,14 @@ export default function ParentLoginScreen() {
                 style={styles.input}
                 value={accessCode}
                 onChangeText={(text) => setAccessCode(text)}
-                placeholder="XXXXXXX$"
+                placeholder="XxXxXxX$"
                 placeholderTextColor="#9CA3AF"
-                autoCapitalize="characters"
+                autoCapitalize="none"
                 autoCorrect={false}
                 maxLength={8}
               />
 
-              <Text style={styles.example}>7 letters + 1 symbol ($, @, #, *)</Text>
+              <Text style={styles.example}>7 letters (A-Z, a-z) + 1 symbol ($, @, #, *)</Text>
 
               <TouchableOpacity
                 style={[styles.loginButton, loading && styles.loginButtonDisabled]}
