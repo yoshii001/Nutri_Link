@@ -25,6 +25,9 @@ import {
 } from 'lucide-react-native';
 import PrincipalHeader from '@/components/PrincipalHeader';
 import PrincipalBottomNav from '@/components/PrincipalBottomNav';
+import MiniDonationChart from '@/components/MiniDonationChart';
+import AlertsPanel, { Alert } from '@/components/AlertsPanel';
+import type { DonationRequest, Donation } from '@/types';
 
 export default function PrincipalDashboardScreen() {
   const router = useRouter();
@@ -39,6 +42,8 @@ export default function PrincipalDashboardScreen() {
   });
   const [refreshing, setRefreshing] = useState(false);
   const [hasSchool, setHasSchool] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [chartData, setChartData] = useState<{ date: string; amount: number }[]>([]);
 
   // Redirect to login if user is not authenticated
   if (!user || !userData) {
@@ -87,9 +92,116 @@ export default function PrincipalDashboardScreen() {
         donations: totalDonations,
         activeRequests,
       });
+
+      // Generate alerts
+      generateAlerts(requests, donations, teachers);
+
+      // Generate chart data (last 7 days)
+      generateChartData(donations);
     } catch (error) {
       console.error('Error loading data:', error);
     }
+  };
+
+  const generateAlerts = (
+    requests: Record<string, DonationRequest>,
+    donations: Record<string, Donation>,
+    teachers: Record<string, any>
+  ) => {
+    const newAlerts: Alert[] = [];
+
+    // Check for pending donation requests
+    const pendingRequests = Object.entries(requests).filter(
+      ([_, r]) => r.status === 'active'
+    );
+    
+    if (pendingRequests.length > 0) {
+      newAlerts.push({
+        id: 'pending-requests',
+        type: 'pending_request',
+        title: `${pendingRequests.length} Active Donation Request${pendingRequests.length > 1 ? 's' : ''}`,
+        message: 'You have donation requests awaiting donor responses.',
+        action: () => router.push('/principal/request-donation'),
+        actionLabel: 'View Requests',
+      });
+    }
+
+    // Check for recent donations (last 24 hours)
+    const recentDonations = Object.values(donations).filter((d) => {
+      const donationDate = new Date(d.date);
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      return donationDate > oneDayAgo && d.status === 'completed';
+    });
+
+    if (recentDonations.length > 0) {
+      const totalRecent = recentDonations.reduce((sum, d) => sum + d.amount, 0);
+      newAlerts.push({
+        id: 'recent-donations',
+        type: 'success',
+        title: `${recentDonations.length} New Donation${recentDonations.length > 1 ? 's' : ''}!`,
+        message: `Received $${totalRecent.toFixed(2)} in the last 24 hours.`,
+        action: () => router.push('/principal/donor-list'),
+        actionLabel: 'View Donors',
+      });
+    }
+
+    // Check if no teachers assigned
+    if (Object.keys(teachers).length === 0) {
+      newAlerts.push({
+        id: 'no-teachers',
+        type: 'urgent',
+        title: 'No Teachers Added',
+        message: 'Add teachers to your school to start managing classes and meals.',
+        action: () => router.push('/principal/manage-teachers'),
+        actionLabel: 'Add Teachers',
+      });
+    }
+
+    // Check for unfulfilled requests
+    const unfulfilledRequests = Object.entries(requests).filter(
+      ([_, r]) => r.status === 'active' && r.fulfilledAmount < r.requestedAmount
+    );
+
+    if (unfulfilledRequests.length > 0) {
+      const totalNeeded = unfulfilledRequests.reduce(
+        (sum, [_, r]) => sum + (r.requestedAmount - r.fulfilledAmount),
+        0
+      );
+      newAlerts.push({
+        id: 'unfulfilled-requests',
+        type: 'low_inventory',
+        title: 'Unfulfilled Donation Needs',
+        message: `Still need $${totalNeeded.toFixed(2)} to meet active donation goals.`,
+        action: () => router.push('/principal/request-donation'),
+        actionLabel: 'View Details',
+      });
+    }
+
+    setAlerts(newAlerts);
+  };
+
+  const generateChartData = (donations: Record<string, Donation>) => {
+    // Get last 7 days
+    const last7Days: { date: string; amount: number }[] = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
+      
+      const dayTotal = Object.values(donations)
+        .filter((d) => d.date.startsWith(dateString) && d.status === 'completed')
+        .reduce((sum, d) => sum + d.amount, 0);
+      
+      last7Days.push({
+        date: dateString,
+        amount: dayTotal,
+      });
+    }
+
+    setChartData(last7Days);
   };
 
   const onRefresh = async () => {
@@ -154,6 +266,12 @@ export default function PrincipalDashboardScreen() {
             <Text style={styles.statLabel}>Active Requests</Text>
           </View>
         </View>
+
+        {/* Alerts Panel */}
+        <AlertsPanel alerts={alerts} />
+
+        {/* Donation Trend Chart */}
+        <MiniDonationChart data={chartData} />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>

@@ -218,14 +218,14 @@ export default function MealPlansScreen() {
                 </View>
               </View>
 
-              {plan.menu.map((meal, index) => (
+              {plan.menu && Array.isArray(plan.menu) && plan.menu.map((meal, index) => (
                 <View key={index} style={styles.mealInfo}>
                   <Text style={styles.mealName}>{meal.mealName}</Text>
                   <Text style={styles.mealDetail}>Quantity: {meal.quantity}</Text>
                   <Text style={styles.mealDetail}>
                     Ingredients: {meal.ingredients.join(', ')}
                   </Text>
-                  {meal.dietaryRestrictions.length > 0 && (
+                  {meal.dietaryRestrictions && meal.dietaryRestrictions.length > 0 && (
                     <Text style={styles.mealDetail}>
                       Restrictions: {meal.dietaryRestrictions.join(', ')}
                     </Text>

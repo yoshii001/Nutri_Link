@@ -1,4 +1,4 @@
-import { ref, get, set, push, update } from 'firebase/database';
+import { ref, get, set, push, update, remove } from 'firebase/database';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { database, auth } from '@/config/firebase';
 import { Teacher, User } from '@/types';
@@ -102,6 +102,11 @@ export const deactivateTeacher = async (teacherId: string): Promise<void> => {
 export const activateTeacher = async (teacherId: string): Promise<void> => {
   const teacherRef = ref(database, `teachers/${teacherId}`);
   await update(teacherRef, { isActive: true });
+};
+
+export const deleteTeacher = async (teacherId: string): Promise<void> => {
+  const teacherRef = ref(database, `teachers/${teacherId}`);
+  await remove(teacherRef);
 };
 
 export const getTeacherByUserId = async (userId: string): Promise<{ id: string; teacher: Teacher } | null> => {

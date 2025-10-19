@@ -115,7 +115,7 @@ export const approveMealPlan = async (planId: string): Promise<void> => {
           claimedAt: new Date().toISOString(),
           claimedBy: 'Auto-approved Meal Plan',
           donorName: 'School Meal Plan',
-          donorId: undefined,
+          // Don't include donorId if undefined - Firebase doesn't allow undefined values
           description: `From approved meal plan: ${meal.ingredients.join(', ')}`,
         });
       }
